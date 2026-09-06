@@ -1,0 +1,40 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/vetra_dev
+    username: vetra
+    password: vetra_dev_password
+
+  jpa:
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+vetra:
+  jwt:
+    secret: "vetra-production-grade-jwt-secret-key-must-be-at-least-256-bits-long-dev-only"
+    expiration-ms: 86400000
+    refresh-expiration-ms: 604800000
+
+  cors:
+    allowed-origins: "http://localhost:3000,http://localhost:3001,http://localhost:8080"
+
+  aws:
+    credentials:
+      access-key: "dev-access-key-placeholder"
+      secret-key: "dev-secret-key-placeholder"
+
+logging:
+  level:
+    root: INFO
+    app.vetra: DEBUG
+    org.springframework.security: DEBUG
+    org.springframework.web: DEBUG
+    org.hibernate.SQL: DEBUG
+    org.hibernate.orm.jdbc.bind: TRACE
+
+springdoc:
+  swagger-ui:
+    enabled: true
+  api-docs:
+    enabled: true

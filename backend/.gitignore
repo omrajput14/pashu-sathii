@@ -1,0 +1,92 @@
+# ─── Compiled / Build ─────────────────────────────────────────────────
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.apk
+*.aab
+
+# ─── Maven Wrapper cache ───────────────────────────────────────────────
+.mvn/wrapper/maven-wrapper.jar
+
+# ─── IDE ──────────────────────────────────────────────────────────────
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+*.swp
+*.swo
+.DS_Store
+
+# ─── Environment & Secrets ────────────────────────────────────────────
+.env
+*.env
+!*.env.example
+
+# ─── Logs ─────────────────────────────────────────────────────────────
+logs/
+*.log
+
+# ─── Docker volumes & Backups ─────────────────────────────────────────
+postgres-data/
+backups/
+*.dump
+
+# ─── Scratch and temp files ────────────────────────────────────────────
+scratch/
+*.tmp
+
+# ─── AWS Credentials & CLI configuration ──────────────────────────────
+# Never commit AWS credentials, CLI session files, or SSO cache.
+.aws/
+aws-credentials
+aws-exports.js
+
+# ─── Infrastructure-as-Code state & sensitive outputs ─────────────────
+# Terraform/OpenTofu state files contain plaintext secrets.
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+.terraform/
+.terraform.lock.hcl
+infra/.terraform/
+
+# ─── TLS / PEM private keys ───────────────────────────────────────────
+*.pem
+*.key
+*.p12
+*.pfx
+*.jks
+
+# ─── Graphify Knowledge Graph ─────────────────────────────────────────
+graphify-out/
+.graphify/
+
+# ─── AI Agents & Assistant Workspaces ─────────────────────────────────
+.claude/
+.gemini/
+.agents/
+
+# ─── Python Bytecode & Environments ───────────────────────────────────
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+venv/
+.venv/
+env/
+
+# ─── Test & Automation Reports ────────────────────────────────────────
+demo_data_report.json
+*_report.json
+
+# ─── OS Metadata ──────────────────────────────────────────────────────
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

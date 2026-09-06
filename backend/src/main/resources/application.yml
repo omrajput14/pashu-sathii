@@ -1,0 +1,318 @@
+spring:
+  application:
+    name: pashu-sathi-backend
+  profiles:
+    active: ${SPRING_PROFILE:dev}
+
+  # ─── Datasource (values overridden per profile) ────────────────────
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/vetra_dev}
+    username: ${DB_USERNAME:vetra}
+    password: ${DB_PASSWORD:vetra_dev_password}
+    driver-class-name: org.postgresql.Driver
+    hikari:
+      pool-name: VetraHikariPool
+      maximum-pool-size: 20
+      minimum-idle: 5
+      idle-timeout: 30000
+      connection-timeout: 20000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+
+  # ─── JPA / Hibernate ───────────────────────────────────────────────
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+    open-in-view: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+        jdbc:
+          time_zone: UTC
+          lob:
+            non_contextual_creation: true
+
+  # ─── Flyway ────────────────────────────────────────────────────────
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 0
+    locations: classpath:db/migration
+    table: flyway_schema_history
+    validate-on-migrate: true
+    out-of-order: false
+
+  # ─── Jackson ───────────────────────────────────────────────────────
+  jackson:
+    default-property-inclusion: non_null
+    serialization:
+      write-dates-as-timestamps: false
+    deserialization:
+      fail-on-unknown-properties: false
+    time-zone: UTC
+
+  # ─── Multipart Upload Limits ───────────────────────────────────────
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+
+# ─── Server ──────────────────────────────────────────────────────────
+server:
+  port: ${SERVER_PORT:8080}
+  servlet:
+    context-path: /
+  error:
+    include-message: never
+    include-binding-errors: never
+    include-stacktrace: never
+    include-exception: false
+
+# ─── Management / Actuator & Micrometer Observability ─────────────────
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8080}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus,flyway
+      base-path: /actuator
+  endpoint:
+    health:
+      show-details: when-authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: db, diskSpace
+        liveness:
+          include: ping
+    prometheus:
+      enabled: true
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+  # ─── Distributed Tracing — Micrometer + OpenTelemetry Bridge ─────────
+  # sampler.probability=1.0 means 100% of requests are traced (suitable for dev).
+  # In production, override via MANAGEMENT_TRACING_SAMPLING_PROBABILITY=0.1
+  tracing:
+    sampling:
+      probability: ${MANAGEMENT_TRACING_SAMPLING_PROBABILITY:1.0}
+
+  # OTLP exporter: sends spans via OTLP/HTTP (port 4318) to Grafana Tempo.
+  # In Docker: tempo is the service name on vetra-network.
+  # In local dev: override via OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+  otlp:
+    tracing:
+      endpoint: ${OTEL_EXPORTER_OTLP_ENDPOINT:http://localhost:4318}/v1/traces
+
+  # Standard OTel semantic conventions for service identity.
+  # Uses Spring Boot 3.x auto-configuration (management.opentelemetry.*) — not otel.* agent format.
+  # These attributes appear on every span and allow Grafana to group traces by service/env.
+  opentelemetry:
+    resource-attributes:
+      "service.name": ${OTEL_SERVICE_NAME:vetra-backend}
+      "service.namespace": ${OTEL_SERVICE_NAMESPACE:vetra}
+      "service.version": ${OTEL_SERVICE_VERSION:0.12.5.0}
+      "service.instance.id": ${OTEL_SERVICE_INSTANCE_ID:vetra-backend-01}
+      "deployment.environment": ${SPRING_PROFILES_ACTIVE:dev}
+
+  metrics:
+    tags:
+      application: vetra-backend
+      environment: ${SPRING_PROFILE:dev}
+    distribution:
+      percentiles-histogram:
+        http.server.requests: true
+      sla:
+        http.server.requests: 50ms,100ms,200ms,500ms,1s
+    enable:
+      jvm: true
+      process: true
+      system: true
+      hikaricp: true
+      logback: true
+  info:
+    env:
+      enabled: true
+
+# ─── OpenAPI / Swagger ───────────────────────────────────────────────
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operations-sorter: method
+    tags-sorter: alpha
+    display-request-duration: true
+    try-it-out-enabled: true
+  show-actuator: false
+
+# ─── Application Custom Properties ───────────────────────────────────
+vetra:
+  # JWT
+  jwt:
+    secret: ${JWT_SECRET:vetra-production-grade-jwt-secret-key-must-be-at-least-256-bits-long-dev-only}
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}       # 24 h default
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}  # 7 days
+
+  # CORS
+  cors:
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001}
+    allowed-methods: GET,POST,PUT,DELETE,PATCH,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+    max-age: 3600
+
+  # AWS S3
+  aws:
+    region: ${AWS_REGION:ap-south-1}
+    s3:
+      bucket-name: ${AWS_S3_BUCKET:vetra-media}
+      presigned-url-expiry-minutes: ${AWS_S3_URL_EXPIRY:15}
+    credentials:
+      access-key: ${AWS_ACCESS_KEY_ID:}
+      secret-key: ${AWS_SECRET_ACCESS_KEY:}
+
+  # Firebase Cloud Messaging
+  firebase:
+    enabled: ${FIREBASE_ENABLED:${FCM_ENABLED:true}}
+    project-id: ${FIREBASE_PROJECT_ID:${FCM_PROJECT_ID:vetra-1ebfa}}
+    credentials-path: ${FIREBASE_CREDENTIALS_PATH:${FCM_CREDENTIALS_PATH:}}
+    client-email: ${FIREBASE_CLIENT_EMAIL:${FCM_CLIENT_EMAIL:}}
+    private-key: ${FIREBASE_PRIVATE_KEY:${FCM_PRIVATE_KEY:}}
+
+  # AI Platform Orchestration
+  ai:
+    gemini:
+      enabled: ${GEMINI_ENABLED:true}
+      api-key: ${GEMINI_API_KEY:}
+      model: ${GEMINI_MODEL:gemini-3.5-flash}
+      base-url: ${GEMINI_BASE_URL:https://generativelanguage.googleapis.com}
+      timeout: ${GEMINI_TIMEOUT:30s}
+      max-retries: ${GEMINI_MAX_RETRIES:3}
+
+    # ── AI Gateway Layer (Stage 13) ─────────────────────────────────────────
+    # Provider-agnostic routing layer. Business logic references aliases only.
+    # All provider-specific model IDs are confined to this section.
+    gateway:
+      enabled: ${AI_GATEWAY_ENABLED:true}
+      default-provider: ${AI_GATEWAY_DEFAULT_PROVIDER:gemini}
+      default-model: ${AI_GATEWAY_DEFAULT_MODEL:diagnostics-fast}
+      timeout: ${AI_GATEWAY_TIMEOUT:10s}
+      cache:
+        enabled: ${AI_GATEWAY_CACHE_ENABLED:true}
+        ttl: ${AI_GATEWAY_CACHE_TTL:24h}
+        key-prefix: "vetra:ai:cache:"
+        stampede-lock-timeout: 10s
+      providers:
+        - name: gemini
+          enabled: ${GEMINI_ENABLED:true}
+          priority: 1
+          resilience:
+            max-retry-attempts: ${AI_RETRY_MAX_ATTEMPTS:4}
+            wait-duration: ${AI_RETRY_WAIT_DURATION:1500ms}
+            backoff-multiplier: 2.0
+            circuit-breaker-failure-rate-threshold: 50
+            circuit-breaker-wait-duration-in-open-state: 10s
+            circuit-breaker-sliding-window-size: 10
+            timeout: 10s
+        - name: noop
+          enabled: ${NOOP_ENABLED:true}
+          priority: 99
+          resilience:
+            max-retry-attempts: 1
+            wait-duration: 10ms
+            circuit-breaker-failure-rate-threshold: 100
+      models:
+        diagnostics-fast:
+          provider: gemini
+          model-id: ${GEMINI_MODEL:gemini-3.5-flash}
+          capabilities: [VISION, JSON_MODE]
+          context-window: 1048576
+          max-output-tokens: 8192
+          enabled: ${GEMINI_ENABLED:true}
+        noop-default:
+          provider: noop
+          model-id: noop-v1
+          capabilities: [VISION, JSON_MODE]
+          context-window: 1
+          max-output-tokens: 1
+          enabled: ${NOOP_ENABLED:true}
+
+    # Enterprise Multi-Agent Framework
+    agents:
+      diagnosis-prompt-id: diagnosis.visual.v1
+      treatment-prompt-id: treatment.recommendation.v1
+      knowledge-prompt-id: knowledge.disease.v1
+      report-prompt-id: report.summary.v1
+
+    # Enterprise Veterinary Knowledge Platform (RAG)
+    rag:
+      enabled: ${VETRA_RAG_ENABLED:true}
+      top-k: ${VETRA_RAG_TOP_K:3}
+      similarity-threshold: ${VETRA_RAG_SIMILARITY_THRESHOLD:0.65}
+      chunk-size: ${VETRA_RAG_CHUNK_SIZE:500}
+      overlap: ${VETRA_RAG_OVERLAP:50}
+      embedding-provider: ${VETRA_RAG_EMBEDDING_PROVIDER:local}
+      vector-store-provider: ${VETRA_RAG_VECTOR_STORE_PROVIDER:in-memory}
+
+    # Modeled Livestock Economic Savings & Loss Avoidance (Phase 4B)
+    economic-impact:
+      prevention-factor: ${VETRA_ECONOMIC_PREVENTION_FACTOR:0.40}
+      reference-values:
+        cattle: ${VETRA_REF_VAL_CATTLE:45000}
+        buffalo: ${VETRA_REF_VAL_BUFFALO:55000}
+        sheep: ${VETRA_REF_VAL_SHEEP:7000}
+        goat: ${VETRA_REF_VAL_GOAT:8000}
+        swine: ${VETRA_REF_VAL_SWINE:12000}
+        poultry: ${VETRA_REF_VAL_POULTRY:350}
+        other: ${VETRA_REF_VAL_OTHER:10000}
+
+    # Isolated Media Storage Configuration
+    media:
+      storage-dir: ${VETRA_MEDIA_DIR:./media-uploads}
+      max-file-size-bytes: ${VETRA_MEDIA_MAX_BYTES:10485760}
+
+  # Redis Infrastructure Foundation
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+    database: ${REDIS_DATABASE:0}
+    timeout: ${REDIS_TIMEOUT:2000ms}
+    ssl: ${REDIS_SSL:false}
+
+# ─── Application Info (exposed via /actuator/info) ───────────────────
+info:
+  app:
+    name: Vetra Backend
+    version: "@project.version@"
+    description: Livestock and Veterinary Healthcare Platform
+    environment: ${SPRING_PROFILE:dev}
+
+# ─── Logging ─────────────────────────────────────────────────────────
+logging:
+  pattern:
+    # traceId and spanId are populated by Micrometer Tracing bridge automatically.
+    # requestId is populated by RequestIdFilter (preserved from previous stages).
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [traceId=%X{traceId}] [spanId=%X{spanId}] [%X{requestId}] %-5level %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] [traceId=%X{traceId}] [spanId=%X{spanId}] [%X{requestId}] [%X{userId}] %-5level %logger{36} - %msg%n"
+  file:
+    name: logs/vetra.log
+    max-size: 50MB
+    max-history: 30
+  level:
+    root: INFO
+    app.vetra: INFO
+    org.springframework.security: WARN
+    org.hibernate.SQL: WARN
+    org.flywaydb: INFO
+    # datasource-micrometer observation logging
+    net.ttddyy.observation: WARN
