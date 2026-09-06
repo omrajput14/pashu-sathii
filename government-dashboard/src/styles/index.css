@@ -1,0 +1,194 @@
+@import 'leaflet/dist/leaflet.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  /* Cartographic Navy Navigation */
+  --color-nav-bg: #0E1A2B;
+  --color-nav-text: #9FB1C4;
+  --color-nav-text-active: #F4F7FA;
+  --color-nav-border: #1B2B40;
+  --color-nav-hover: #142337;
+
+  /* Clinical Workspace & Surfaces */
+  --color-workspace-bg: #F6F8FA;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-surface-active: #F1F4F8;
+  --color-border: #E1E6EC;
+  --color-border-strong: #C7D0DB;
+
+  /* Institutional Typography Palette */
+  --color-text-primary: #101826;
+  --color-text-secondary: #526074;
+  --color-text-muted: #93A1B0;
+
+  /* Muted Institutional Accent */
+  --color-accent: #1E5C97;
+  --color-accent-hover: #164A7C;
+  --color-accent-subtle: #E4EDF6;
+
+  /* 4-Tier Epidemiological Risk Scale */
+  --color-risk-critical: #6E1423;
+  --color-risk-critical-bg: #FBEBEB;
+  --color-risk-high: #D97B1F;
+  --color-risk-high-bg: #FEF3E8;
+  --color-risk-medium: #C9A227;
+  --color-risk-medium-bg: #FDF8E7;
+  --color-risk-low: #3E7C4A;
+  --color-risk-low-bg: #EDF7F0;
+
+  /* Case Point Semantics */
+  --color-case-confirmed: #B7301F;
+  --color-case-suspected: #D97B1F;
+}
+
+/* Base Body Styles */
+body {
+  margin: 0;
+  background-color: var(--color-workspace-bg);
+  color: var(--color-text-primary);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Numeric alignment utility for tabular epidemiological data */
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Keyboard focus rings */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Custom Scrollbar for Command Telemetry Rails */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-workspace-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
+
+/* Leaflet Custom Overrides for Government Design System */
+.leaflet-container {
+  font-family: 'Inter', sans-serif !important;
+  background-color: #F6F8FA !important;
+  z-index: 10 !important;
+}
+
+.leaflet-popup-content-wrapper {
+  background: #FFFFFF !important;
+  color: #101826 !important;
+  border: 1px solid #E1E6EC !important;
+  border-radius: 4px !important;
+  box-shadow: 0 4px 12px rgba(14, 26, 43, 0.1) !important;
+  padding: 0 !important;
+}
+
+.leaflet-popup-content {
+  margin: 0 !important;
+  line-height: 1.4 !important;
+}
+
+.leaflet-popup-tip {
+  background: #FFFFFF !important;
+  border: 1px solid #E1E6EC !important;
+}
+
+/* Custom Marker Styling */
+.vetra-outbreak-marker {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9999px;
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  font-size: 11px;
+  box-shadow: 0 2px 8px rgba(14, 26, 43, 0.25);
+  cursor: pointer;
+  transition: transform 0.15s ease-in-out;
+}
+
+.vetra-outbreak-marker:hover {
+  transform: scale(1.12);
+}
+
+.vetra-case-confirmed-marker {
+  width: 14px;
+  height: 14px;
+  background-color: #B7301F;
+  border: 1.5px solid #FFFFFF;
+  box-shadow: 0 1px 4px rgba(183, 48, 31, 0.4);
+  cursor: pointer;
+}
+
+
+.vetra-case-ai-screening-marker {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  background-color: #6366F1;
+  border: 2px solid #FFFFFF;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px #6366F1, 0 2px 6px rgba(99, 102, 241, 0.45);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vetra-ai-pulse {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  background-color: rgba(99, 102, 241, 0.4);
+  animation: ai-pulse-animation 2s infinite ease-out;
+}
+
+@keyframes ai-pulse-animation {
+  0% {
+    transform: scale(1);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+
+.vetra-case-suspected-marker {
+  width: 12px;
+  height: 12px;
+  background-color: #FFFFFF;
+  border: 2px solid #D97B1F;
+  border-radius: 2px;
+  transform: rotate(45deg);
+  box-shadow: 0 1px 4px rgba(217, 123, 31, 0.4);
+  cursor: pointer;
+}
+
+/* Reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
