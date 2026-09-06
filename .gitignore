@@ -1,0 +1,51 @@
+# ─── OS Metadata ──────────────────────────────────────────────────────
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# ─── Environment & Secrets ────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+
+# ─── IDE & Editors ────────────────────────────────────────────────────
+.idea/
+.vscode/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# ─── Backend (Spring Boot / Maven) ────────────────────────────────────
+**/target/
+**/.mvn/wrapper/maven-wrapper.jar
+
+# ─── Frontend (Flutter / Dart) ────────────────────────────────────────
+**/.dart_tool/
+**/build/
+**/.flutter-plugins
+**/.flutter-plugins-dependencies
+**/.pub-cache/
+**/.pub/
+**/coverage/
+
+# ─── Government Dashboard (React / Vite / Node) ──────────────────────
+**/node_modules/
+**/dist/
+**/dist-ssr/
+**/*.local
+
+# ─── AI Agents & Knowledge Graphs ─────────────────────────────────────
+.agents/
+.claude/
+.gemini/
+graphify-out/
+.graphify/
