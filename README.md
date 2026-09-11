@@ -2,11 +2,11 @@
 
 <img src="government-dashboard/public/pashu-sathi-logo.png" alt="Pashu Sathi" width="160"/>
 
-# PASHU SATHI (पशु साथी)
+# PASHU SATHI 
 
 **National Animal Healthcare, Veterinary Telemedicine & Epidemiological Surveillance Platform**
 
-Built for **Smart India Hackathon 2025** — Problem Statement **#26128**, Maharashtra State Innovation Society, MedTech Track
+Built for **Smart India Hackathon 2026** — Problem Statement **#26128**, Maharashtra State Innovation Society, MedTech Track
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](frontend/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.16-6DB33F?logo=springboot&logoColor=white)](backend/)
