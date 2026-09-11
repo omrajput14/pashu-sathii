@@ -4,10 +4,10 @@
 > *Developed for Smart India Hackathon (SIH)*
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter)](frontend/)
-[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.4.3-6DB33F?logo=springboot)](backend/)
+[![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.16-6DB33F?logo=springboot)](backend/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react)](government-dashboard/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript)](government-dashboard/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16-4169E1?logo=postgresql)](backend/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql)](backend/)
 [![Azure](https://img.shields.io/badge/Cloud-Azure_Container_Apps-0078D4?logo=microsoftazure)](backend/)
 
 ---
@@ -37,7 +37,7 @@ graph TD
     end
 
     subgraph Application Layer
-        SB[Pashu Sathi Backend Service<br/>Spring Boot 3.4.3 / Java 21]
+        SB[Pashu Sathi Backend Service<br/>Spring Boot 3.5.16 / Java 21]
         SEC[Spring Security & JWT Auth]
         AI[AI Governance & Triage Engine]
         GEO[Spatial Surveillance & GIS Engine]
@@ -72,7 +72,7 @@ pashu-sathi/
 │   ├── test/                   # Comprehensive Flutter unit & widget test suite (157+ tests)
 │   └── pubspec.yaml            # Flutter package dependencies
 │
-├── backend/                    # Spring Boot 3.4.3 Cloud Enterprise Backend
+├── backend/                    # Spring Boot 3.5.16 Cloud Enterprise Backend
 │   ├── src/main/java/app/vetra # Application modules, services, controllers, entities
 │   ├── src/main/resources/     # Database migrations (Flyway), application profiles
 │   ├── src/test/java/app/vetra # Backend unit & integration test suites
@@ -115,7 +115,7 @@ flutter test
 flutter run
 ```
 
-### 2. Backend (Spring Boot 3.4.3)
+### 2. Backend (Spring Boot 3.5.16)
 
 ```bash
 cd backend
@@ -160,7 +160,7 @@ npm run dev
 | Subsystem | Technology | Test Runner | Test Count | Status |
 | :--- | :--- | :--- | :--- | :--- |
 | **Frontend** | Flutter / Dart | `flutter test` | 157 passed | ✅ All Green |
-| **Backend** | Spring Boot / JUnit 5 | `./mvnw test` | 134+ tests | ✅ All Green |
+| **Backend** | Spring Boot / JUnit 5 | `./mvnw test` | 464 passed | ✅ All Green |
 | **Government Dashboard** | React / Vitest | `vitest run` | 95 passed | ✅ All Green |
 
 ---
