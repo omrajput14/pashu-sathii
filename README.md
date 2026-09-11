@@ -125,27 +125,36 @@ A single confirmed case doesn't trigger an alert on its own — the risk engine 
 
 ```mermaid
 graph TD
-    subgraph "Client Layer"
-        FA["Farmer / Paravet Mobile App<br/>Flutter / Dart"]
-        GD["Government Surveillance Dashboard<br/>React / TypeScript / Vite"]
+    classDef client fill:#064e3b,stroke:#10b981,stroke-width:2px,color:#ecfdf5;
+    classDef gateway fill:#0c4a6e,stroke:#38bdf8,stroke-width:2px,color:#f0f9ff;
+    classDef security fill:#3b0764,stroke:#c084fc,stroke-width:2px,color:#faf5ff;
+    classDef domain fill:#1e1b4b,stroke:#818cf8,stroke-width:2px,color:#e0e7ff;
+    classDef ai fill:#451a03,stroke:#fb923c,stroke-width:2px,color:#fff7ed;
+    classDef gis fill:#134e4a,stroke:#2dd4bf,stroke-width:2px,color:#ccfbf1;
+    classDef notif fill:#701a75,stroke:#f472b6,stroke-width:2px,color:#fdf2f8;
+    classDef storage fill:#1e293b,stroke:#38bdf8,stroke-width:2px,color:#f8fafc;
+
+    subgraph Client ["  Client Layer  "]
+        FA["Farmer / Paravet Mobile App<br/>Flutter / Dart"]:::client
+        GD["Government Surveillance Dashboard<br/>React / TypeScript / Vite"]:::client
     end
 
-    subgraph "API & Gateway Layer"
-        AG["Azure Container Apps / Cloud Ingress"]
+    subgraph Gateway ["  API & Gateway Layer  "]
+        AG["Azure Container Apps / Cloud Ingress"]:::gateway
     end
 
-    subgraph "Application Layer — Spring Boot 3.5 / Java 21"
-        SEC["Auth & Spring Security (JWT)"]
-        CORE["Domain Services<br/>Animal · Appointment · Medical Record · Mortality · Vaccination"]
-        AI["AI Orchestrator<br/>Agent · RAG · Prompt · Provider Gateway"]
-        GEO["Disease Surveillance & GIS Engine<br/>Outbreak · Boundary · Dashboard"]
-        NOTIF["Notification Service<br/>Firebase Push"]
+    subgraph AppLayer ["  Application Layer — Spring Boot 3.5 / Java 21  "]
+        SEC["Auth & Spring Security (JWT)"]:::security
+        CORE["Domain Services<br/>Animal · Appointment · Medical Record · Mortality · Vaccination"]:::domain
+        AI["AI Orchestrator<br/>Agent · RAG · Prompt · Provider Gateway"]:::ai
+        GEO["Disease Surveillance & GIS Engine<br/>Outbreak · Boundary · Dashboard"]:::gis
+        NOTIF["Notification Service<br/>Firebase Push"]:::notif
     end
 
-    subgraph "Data & Storage Layer"
-        PG[("PostgreSQL 17 + PostGIS")]
-        RD[("Redis 7.4 Cache")]
-        BLOB[("Azure Blob Document Store")]
+    subgraph DataLayer ["  Data & Storage Layer  "]
+        PG[("PostgreSQL 17 + PostGIS")]:::storage
+        RD[("Redis 7.4 Cache")]:::storage
+        BLOB[("Azure Blob Document Store")]:::storage
     end
 
     FA -->|REST / HTTPS| AG
@@ -162,6 +171,11 @@ graph TD
     CORE --> BLOB
     NOTIF -.->|push| FA
     CORE --> NOTIF
+
+    style Client fill:#022c22,stroke:#059669,stroke-width:2px,color:#a7f3d0,stroke-dasharray: 4 4
+    style Gateway fill:#082f49,stroke:#0284c7,stroke-width:2px,color:#bae6fd,stroke-dasharray: 4 4
+    style AppLayer fill:#0f172a,stroke:#475569,stroke-width:2px,color:#cbd5e1,stroke-dasharray: 4 4
+    style DataLayer fill:#111827,stroke:#3b82f6,stroke-width:2px,color:#93c5fd,stroke-dasharray: 4 4
 ```
 
 ---
