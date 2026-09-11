@@ -1,38 +1,55 @@
+<div align="center">
+
+<img src="government-dashboard/public/pashu-sathi-logo.png" alt="Pashu Sathi" width="160"/>
+
 # PASHU SATHI (पशु साथी)
 
-> **National Animal Healthcare, Veterinary Telemedicine & Epidemiological Surveillance Platform**
-> *Developed for Smart India Hackathon (SIH)*
+**National Animal Healthcare, Veterinary Telemedicine & Epidemiological Surveillance Platform**
+
+Built for **Smart India Hackathon 2025** — Problem Statement **#26128**, Maharashtra State Innovation Society, MedTech Track
 
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](frontend/)
 [![Spring Boot](https://img.shields.io/badge/Spring_Boot-3.5.16-6DB33F?logo=springboot&logoColor=white)](backend/)
 [![Java](https://img.shields.io/badge/Java-21-ED8B00?logo=openjdk&logoColor=white)](backend/)
 [![React](https://img.shields.io/badge/React-18-61DAFB?logo=react&logoColor=white)](government-dashboard/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?logo=typescript&logoColor=white)](government-dashboard/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](backend/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17_%2B_PostGIS-4169E1?logo=postgresql&logoColor=white)](backend/)
 [![Redis](https://img.shields.io/badge/Redis-7.4-DC382D?logo=redis&logoColor=white)](backend/)
 [![Azure](https://img.shields.io/badge/Cloud-Azure_Container_Apps-0078D4?logo=microsoftazure&logoColor=white)](backend/)
-[![Tests](https://img.shields.io/badge/tests-716_passing-brightgreen)](#-verification--test-coverage-summary)
+[![Tests](https://img.shields.io/badge/tests-716_passing-brightgreen)](#verification--test-coverage-summary)
+
+</div>
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
-- [Overview](#-overview)
-- [Key Features](#-key-features)
-- [System Architecture](#️-system-architecture)
-- [AI-Assisted Triage Flow](#-ai-assisted-triage-flow)
-- [Tech Stack](#-tech-stack)
-- [Repository Structure](#-repository-structure)
-- [Quick Start Guides](#-quick-start-guides)
-- [Verification & Test Coverage](#-verification--test-coverage-summary)
-- [Localization](#-localization)
-- [Architectural & History Integrity Notice](#-architectural--history-integrity-notice)
+- [Problem Statement](#problem-statement)
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [Outbreak Detection Flow](#outbreak-detection-flow)
+- [System Architecture](#system-architecture)
+- [Tech Stack](#tech-stack)
+- [Repository Structure](#repository-structure)
+- [Quick Start Guides](#quick-start-guides)
+- [Verification & Test Coverage Summary](#verification--test-coverage-summary)
+- [Localization](#localization)
+- [Architectural & History Integrity Notice](#architectural--history-integrity-notice)
 
 ---
 
-## 📌 Overview
+## Problem Statement
 
-**PASHU SATHI** is a unified, end-to-end veterinary and livestock intelligence platform engineered to bridge the gap between rural farmers, certified veterinarians, para-vets, and national disease surveillance authorities.
+> **SIH Problem Statement #26128 — Livestock Disease Early Detection**
+> Maharashtra State Innovation Society · MedTech Track · Smart India Hackathon 2025
+
+Rural India loses an estimated **₹25,000 crore a year** to preventable livestock disease (DAHD), and outbreaks are typically confirmed **7–14 days** after the first animal falls sick — by then the herd is already dying. Maharashtra alone carries roughly **3.5 crore cattle**, and there is no unified way for a farmer, a field vet, and a district health officer to see the same outbreak at the same time.
+
+**Pashu Sathi closes that loop end to end:** a farmer files a report from the field in seconds, an AI model does the first-pass screening, a licensed vet confirms it, and a spatial clustering + risk engine decides in real time whether it's an isolated case or the start of an outbreak — surfacing it on a government dashboard before it spreads.
+
+---
+
+## Overview
 
 The platform ships as three coordinated applications sharing one backend:
 
@@ -42,13 +59,13 @@ The platform ships as three coordinated applications sharing one backend:
 
 ---
 
-## ✨ Key Features
+## Key Features
 
 <table>
 <tr>
-<th>📱 Farmer / Paravet App</th>
-<th>⚙️ Backend Platform</th>
-<th>🏛️ Government Dashboard</th>
+<th>Farmer / Paravet App</th>
+<th>Backend Platform</th>
+<th>Government Dashboard</th>
 </tr>
 <tr valign="top">
 <td>
@@ -71,7 +88,7 @@ The platform ships as three coordinated applications sharing one backend:
 - Vaccination campaign orchestration
 - Mortality & medical record tracking
 - Redis-cached, rate-limited REST APIs
-- Firebase push + in-app notification preferences
+- Firebase push + notification preferences
 - Developer analytics & health endpoints
 
 </td>
@@ -92,7 +109,19 @@ The platform ships as three coordinated applications sharing one backend:
 
 ---
 
-## 🏛️ System Architecture
+## Outbreak Detection Flow
+
+The core of the platform: what happens between a farmer noticing something wrong and a district officer dispatching a response team.
+
+<div align="center">
+<img src="backend/sih_flowchart.svg" alt="Outbreak detection flow: farmer report to AI screening to vet confirmation to PostGIS clustering to risk scoring to dashboard alert to field response" width="480"/>
+</div>
+
+A single confirmed case doesn't trigger an alert on its own — the risk engine only escalates once a spatial and epidemiological pattern emerges, which is what keeps false alarms down and officer trust up.
+
+---
+
+## System Architecture
 
 ```mermaid
 graph TD
@@ -137,35 +166,7 @@ graph TD
 
 ---
 
-## 🤖 AI-Assisted Triage Flow
-
-The backend's `ai/` module (agent, RAG, prompt, provider gateway, and orchestrator packages) drives symptom triage end to end:
-
-```mermaid
-sequenceDiagram
-    actor Farmer
-    participant App as Mobile App
-    participant API as Backend API
-    participant Agent as AI Orchestrator / Agent
-    participant RAG as RAG Knowledge Base
-    participant Vet as Veterinarian
-
-    Farmer->>App: Describe symptoms / capture photo
-    App->>API: POST /ai/scan or /ai/advisor
-    API->>Agent: Dispatch triage request
-    Agent->>RAG: Retrieve relevant veterinary knowledge
-    RAG-->>Agent: Contextual findings
-    Agent-->>API: Triage result + urgency signal
-    API-->>App: Guidance (self-care vs. see a vet)
-    opt Urgent case
-        API->>Vet: Notify & suggest appointment
-        Vet-->>Farmer: Appointment confirmed (in-app chat)
-    end
-```
-
----
-
-## 🧰 Tech Stack
+## Tech Stack
 
 | Layer | Technologies |
 | :--- | :--- |
@@ -179,7 +180,7 @@ sequenceDiagram
 
 ---
 
-## 📂 Repository Structure
+## Repository Structure
 
 ```
 pashu-sathi/
@@ -214,7 +215,7 @@ pashu-sathi/
 
 ---
 
-## 🚀 Quick Start Guides
+## Quick Start Guides
 
 ### 1. Frontend (Flutter Mobile App)
 
@@ -274,26 +275,26 @@ npm run dev
 
 ---
 
-## 🧪 Verification & Test Coverage Summary
+## Verification & Test Coverage Summary
 
 | Subsystem | Technology | Test Runner | Test Count | Status |
 | :--- | :--- | :--- | :--- | :--- |
-| **Frontend** | Flutter / Dart | `flutter test` | 157 passed | ✅ All Green |
-| **Backend** | Spring Boot / JUnit 5 | `./mvnw test` | 464 passed | ✅ All Green |
-| **Government Dashboard** | React / Vitest | `vitest run` | 95 passed | ✅ All Green |
-| **Total** | | | **716 passed** | ✅ All Green |
+| **Frontend** | Flutter / Dart | `flutter test` | 157 passed | Passing |
+| **Backend** | Spring Boot / JUnit 5 | `./mvnw test` | 464 passed | Passing |
+| **Government Dashboard** | React / Vitest | `vitest run` | 95 passed | Passing |
+| **Total** | | | **716 passed** | Passing |
 
 ---
 
-## 🌐 Localization
+## Localization
 
 The mobile app ships fully localized in four languages, so farmers and paravets can use it in the language they're most comfortable with:
 
-🇬🇧 English · 🇮🇳 हिंदी (Hindi) · 🇮🇳 मराठी (Marathi) · 🇵🇰 اردو (Urdu)
+**English · हिंदी (Hindi) · मराठी (Marathi) · اردو (Urdu)**
 
 ---
 
-## 🔒 Architectural & History Integrity Notice
+## Architectural & History Integrity Notice
 
 - **Full Git History Preserved**: The repository merges all historical commits from the independent Flutter frontend, Spring Boot backend, and Government Dashboard repositories via standard `git subtree` without squashing, rewriting, or rebasing.
 - **Package Integrity**: All backend Java packages (`app.vetra.*`), database migration sequences, and API contracts remain strictly preserved to ensure seamless zero-downtime deployment.
