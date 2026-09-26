@@ -6,6 +6,7 @@ import {
   RISK_THRESHOLDS,
   RISK_CONFIG,
   classifyScoreToRiskLevel,
+  resolveRiskToken,
 } from '../core/theme/tokens';
 
 describe('Risk Taxonomy & RiskBadge Component', () => {
@@ -55,5 +56,33 @@ describe('Risk Taxonomy & RiskBadge Component', () => {
     const badge = screen.getByTestId('risk-badge');
     expect(badge).toBeInTheDocument();
     expect(badge).toHaveTextContent('LOW');
+  });
+
+  // OutbreakScheduler stamps riskScore=LOW when it auto-resolves a cluster but
+  // leaves compositeRiskScore alone, so these two fields routinely disagree.
+  it('never shows a label that contradicts the score it prints', () => {
+    render(<RiskBadge level="LOW" score={71} />);
+    const badge = screen.getByTestId('risk-badge');
+    expect(badge).toHaveTextContent('(71)');
+    expect(badge).toHaveTextContent('HIGH');
+    expect(badge).not.toHaveTextContent('LOW');
+  });
+
+  it('resolveRiskToken derives colour from the score, not the stale enum', () => {
+    expect(resolveRiskToken({ level: 'LOW', score: 71 }).color).toBe(RISK_CONFIG.HIGH.color);
+    expect(resolveRiskToken({ level: 'LOW', score: 85 }).color).toBe(RISK_CONFIG.CRITICAL.color);
+    expect(resolveRiskToken({ level: 'LOW', score: 36 }).color).toBe(RISK_CONFIG.MEDIUM.color);
+    // falls back to the enum when no score is available
+    expect(resolveRiskToken({ level: 'CRITICAL', score: null }).color).toBe(
+      RISK_CONFIG.CRITICAL.color
+    );
+  });
+
+  it('gives equal scores the same colour regardless of cluster status', () => {
+    // A resolved 71 and an active 71 must not be coloured differently - status is
+    // carried by the status field and filter, not by the risk palette.
+    expect(resolveRiskToken({ level: 'LOW', score: 71 }).color).toBe(
+      resolveRiskToken({ level: 'HIGH', score: 71 }).color
+    );
   });
 });

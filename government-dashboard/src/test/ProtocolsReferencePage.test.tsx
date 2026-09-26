@@ -207,7 +207,7 @@ describe('ProtocolsReferencePage', () => {
         screen.getByText('6. Departmental Gazette & Statutory Orders')
       ).toBeInTheDocument();
       expect(
-        screen.getByText(/Protocol content not configured\. Authoritative departmental standard operating procedure required\./)
+        screen.getAllByText('REFERENCE_SUMMARY')[0]
       ).toBeInTheDocument();
     });
 
@@ -237,7 +237,7 @@ describe('ProtocolsReferencePage', () => {
     expect(screen.getAllByText('Anthrax').length).toBeGreaterThanOrEqual(1);
     expect(screen.getByText('ZOONOTIC RISK')).toBeInTheDocument();
     expect(
-      screen.getByText(/Protocol content not configured\. Authoritative departmental SOP required for clinical recognition criteria\./)
+      screen.getByText('Do NOT open the carcass (no post-mortem)')
     ).toBeInTheDocument();
   });
 

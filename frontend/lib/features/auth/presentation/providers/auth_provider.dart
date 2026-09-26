@@ -38,6 +38,12 @@ class AuthNotifier extends ChangeNotifier {
     return result;
   }
 
+  Future<bool> restoreCachedSession() async {
+    final result = await _service.restoreCachedSession();
+    notifyListeners();
+    return result;
+  }
+
   Future<bool> loginFarmer(String identifier, String password) async {
     final success = await _service.loginFarmer(identifier: identifier, password: password);
     if (success) {
@@ -279,6 +285,16 @@ class AuthNotifier extends ChangeNotifier {
       _vetsFetching = false;
     }
     notifyListeners();
+  }
+
+  /// Returns null when the server accepted the change, otherwise its reason.
+  Future<String?> changePassword(String currentPassword, String newPassword) async {
+    try {
+      await _service.changePassword(currentPassword: currentPassword, newPassword: newPassword);
+      return null;
+    } catch (e) {
+      return e.toString();
+    }
   }
 
   Future<void> logout() async {

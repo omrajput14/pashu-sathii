@@ -1,7 +1,7 @@
 import { UserProfileDto, AuthResponse } from '../types/auth.types';
 import { OutbreakResponse, OutbreakStatisticsResponse } from '../types/outbreak.types';
 import { DiseaseAnalyticsResponse } from '../types/analytics.types';
-import { DiseaseMetadata, DiseaseReportResponse } from '../types/disease.types';
+import { DiseaseMetadata, DiseaseReportResponse, AIScreeningResponse } from '../types/disease.types';
 import { GeoJsonFeatureCollection, HeatmapPoint } from '../types/gis.types';
 import { VaccinationAnalyticsResponse } from '../types/vaccination.types';
 import { OperationalAlertResponse } from '../types/alerts.types';
@@ -598,3 +598,54 @@ export const mockSystemConfiguration: SystemConfigurationResponse = {
     auditTelemetry: 'DAHD Compliance Log Audit Enabled',
   },
 };
+
+export const mockAIScreenings: AIScreeningResponse[] = [
+  {
+    id: 'a1b2c3d4-e5f6-7890-abcd-ef1234567890',
+    animalId: '4e36c51f-4173-4541-be0d-b118c65af80b',
+    tagNumber: 'DHU-TAG-001',
+    animalName: 'Malti',
+    species: 'CATTLE',
+    preliminaryDiagnosis: 'Uterine Prolapse',
+    confidenceScore: 0.95,
+    severity: 'CRITICAL',
+    status: 'COMPLETED',
+    veterinarianVerified: false,
+    verifiedByUserId: null,
+    verifiedByVetName: null,
+    verifiedAt: null,
+    source: 'AI_PRELIMINARY_SCREENING',
+    latitude: 20.9042,
+    longitude: 74.7749,
+    district: 'Dhule',
+    taluka: 'Dhule',
+    state: 'Maharashtra',
+    imageUrl: 'https://vetra-storage.s3.ap-south-1.amazonaws.com/scans/dhule_uterine_prolapse_01.jpg',
+    createdAt: '2026-09-10T14:15:00Z',
+    updatedAt: '2026-09-10T14:15:00Z',
+  },
+  {
+    id: 'scan-pune-lsd-002',
+    animalId: 'animal-001',
+    tagNumber: 'TAG-PUNE-001',
+    animalName: 'Gauri',
+    species: 'CATTLE',
+    preliminaryDiagnosis: 'Lumpy Skin Disease',
+    confidenceScore: 0.88,
+    severity: 'HIGH',
+    status: 'COMPLETED',
+    veterinarianVerified: false,
+    verifiedByUserId: null,
+    verifiedByVetName: null,
+    verifiedAt: null,
+    source: 'AI_PRELIMINARY_SCREENING',
+    latitude: 18.5204,
+    longitude: 73.8567,
+    district: 'Pune',
+    taluka: 'Haveli',
+    state: 'Maharashtra',
+    imageUrl: 'https://api.vetra.co.in/media/vetra-scans/scan_01.jpg',
+    createdAt: '2026-09-10T10:30:00Z',
+    updatedAt: '2026-09-10T10:30:00Z',
+  },
+];

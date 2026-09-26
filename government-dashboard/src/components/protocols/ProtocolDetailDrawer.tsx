@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { DiseaseProtocolRecord } from '../../core/types/protocol.types';
 import { OutbreakResponse } from '../../core/types/outbreak.types';
+import { protocolReference } from '../../core/config/diseaseProtocols';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
 import {
@@ -44,6 +45,7 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
   }, [onClose]);
 
   if (!protocol) return null;
+  const ref = protocolReference(protocol.diseaseName);
 
   const matchingOutbreak = outbreaks.find(
     (o) => o.status !== 'RESOLVED' && o.diseaseName.toLowerCase() === protocol.diseaseName.toLowerCase()
@@ -195,10 +197,10 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
             </div>
 
             <div className="text-[11px] font-mono text-[#526074] pt-1">
-              <strong>Susceptible Species:</strong> {protocol.susceptibleSpecies || 'Not configured in registry'}
+              <strong>Susceptible Species:</strong> {protocol.susceptibleSpecies || ref?.species || 'Not configured in registry'}
             </div>
             <div className="text-[11px] font-mono text-[#526074]">
-              <strong>Primary Transmission:</strong> {protocol.transmissionMode || 'Not configured in registry'}
+              <strong>Primary Transmission:</strong> {protocol.transmissionMode || ref?.transmission || 'Not configured in registry'}
             </div>
           </div>
 
@@ -210,13 +212,11 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
                 <span>2. Field Syndromic Recognition</span>
               </div>
               <Badge variant="outline" size="sm" className="text-[#526074] text-[9px]">
-                CONFIGURATION_REQUIRED
+                REFERENCE_SUMMARY
               </Badge>
             </div>
 
-            <p className="text-[11px] font-mono text-[#526074] leading-relaxed">
-              Protocol content not configured. Authoritative departmental SOP required for clinical recognition criteria.
-            </p>
+            {ref ? <ul className="space-y-1.5 text-[11px] font-mono text-[#526074] list-disc list-inside">{(ref.signs).map((line) => <li key={line}>{line}</li>)}</ul> : <p className="text-[11px] font-mono text-[#526074]">No reference sheet for this disease yet.</p>}
           </div>
 
           {/* Section 3: Biosecurity & Containment Guidance */}
@@ -227,13 +227,11 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
                 <span>3. Containment & Biosecurity Guidance</span>
               </div>
               <Badge variant="outline" size="sm" className="text-[#526074] text-[9px]">
-                CONFIGURATION_REQUIRED
+                REFERENCE_SUMMARY
               </Badge>
             </div>
 
-            <p className="text-[11px] font-mono text-[#526074] leading-relaxed">
-              Protocol content not configured. Authoritative departmental standard operating procedure required.
-            </p>
+            {ref ? <ul className="space-y-1.5 text-[11px] font-mono text-[#526074] list-disc list-inside">{(ref.containment).map((line) => <li key={line}>{line}</li>)}</ul> : <p className="text-[11px] font-mono text-[#526074]">No reference sheet for this disease yet.</p>}
 
             {protocol.surveillanceRadiusKm != null && (
               <div className="p-2 bg-white rounded border border-[#E1E6EC] text-[11px] font-mono text-[#526074]">
@@ -250,13 +248,11 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
                 <span>4. Vaccination & Immunization</span>
               </div>
               <Badge variant="outline" size="sm" className="text-[#526074] text-[9px]">
-                CONFIGURATION_REQUIRED
+                REFERENCE_SUMMARY
               </Badge>
             </div>
 
-            <p className="text-[11px] font-mono text-[#526074] leading-relaxed">
-              Protocol content not configured. Authoritative departmental vaccination schedule required.
-            </p>
+            {ref ? <ul className="space-y-1.5 text-[11px] font-mono text-[#526074] list-disc list-inside">{(ref.vaccination).map((line) => <li key={line}>{line}</li>)}</ul> : <p className="text-[11px] font-mono text-[#526074]">No reference sheet for this disease yet.</p>}
 
             {protocol.vaccineAvailable != null && (
               <div className="p-2 bg-white rounded border border-[#E1E6EC] text-[11px] font-mono text-[#526074]">
@@ -292,12 +288,14 @@ export const ProtocolDetailDrawer: React.FC<ProtocolDetailDrawerProps> = ({
                 <span>6. Departmental Gazette & Statutory Orders</span>
               </div>
               <Badge variant="outline" size="sm" className="text-[#D97B1F] border-[#D97B1F] text-[9px]">
-                CONFIGURATION_REQUIRED
+                STATUTORY
               </Badge>
             </div>
 
             <p className="text-[11px] font-mono text-[#526074] leading-relaxed">
-              Protocol content not configured. Official departmental gazette circular numbers and statutory legal orders must be uploaded through the administrative configuration panel.
+              {protocol.isReportable ? 'Reportable: notify the district Animal Husbandry office at once. ' : ''}
+              Scheduled diseases are controlled under the Prevention and Control of Infectious and Contagious Diseases in
+              Animals Act, 2009. Summary for quick reference; follow the latest DAHD SOP and state orders.
             </p>
           </div>
         </div>

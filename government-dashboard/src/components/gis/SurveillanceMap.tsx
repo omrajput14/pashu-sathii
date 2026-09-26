@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { aiReviewState } from '../../core/utils/aiReview';
 import L from 'leaflet';
 import { OutbreakResponse } from '../../core/types/outbreak.types';
 import { DiseaseReportResponse, AIScreeningResponse } from '../../core/types/disease.types';
@@ -8,7 +9,7 @@ import {
   GeoJsonFeatureCollection,
   AdministrativeFeatureProperties,
 } from '../../core/types/gis.types';
-import { getRiskToken } from '../../core/theme/tokens';
+import { resolveRiskToken } from '../../core/theme/tokens';
 import {
   getMapTilerApiKey,
   getMapTilerTileUrl,
@@ -337,8 +338,13 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
     // A. Render Outbreak Clusters & Risk Buffer Perimeters
     outbreaks.forEach((outbreak) => {
       const isSelected = outbreak.id === selectedOutbreakId;
-      const riskTokens = getRiskToken(outbreak.riskScore);
       const hasNumericScore = outbreak.compositeRiskScore !== null && outbreak.compositeRiskScore !== undefined;
+      // Colour follows the same number shown in the badge, so a 71 can never be
+      // rendered greener than a 67 sitting next to it.
+      const riskTokens = resolveRiskToken({
+        level: outbreak.riskScore,
+        score: outbreak.compositeRiskScore,
+      });
       const scoreBadgeText = hasNumericScore
         ? `${outbreak.compositeRiskScore}`
         : (outbreak.riskScore ? outbreak.riskScore.substring(0, 4) : '—');
@@ -356,7 +362,7 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
         });
 
         circle.bindTooltip(
-          `<strong>${outbreak.diseaseName}</strong><br/>Risk Level: ${outbreak.riskScore}${hasNumericScore ? ` (${outbreak.compositeRiskScore}/100)` : ''}<br/>Radius: ±${outbreak.radiusKm} km<br/>Cases: ${outbreak.affectedReportsCount}`,
+          `<strong>${outbreak.diseaseName}</strong><br/>Risk Level: ${riskTokens.label}${hasNumericScore ? ` (${outbreak.compositeRiskScore}/100)` : ''}<br/>Radius: ±${outbreak.radiusKm} km<br/>Cases: ${outbreak.affectedReportsCount}`,
           { className: 'font-mono text-xs' }
         );
 
@@ -397,7 +403,7 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
           <div class="flex items-center justify-between gap-2 mb-1 border-b border-[#E1E6EC] pb-1">
             <span class="font-bold text-[#101826]">${outbreak.diseaseName}</span>
             <span class="px-1.5 py-0.5 rounded text-[10px] font-bold" style="background-color: ${riskTokens.bg}; color: ${riskTokens.color}">
-              ${outbreak.riskScore}${hasNumericScore ? ` (${outbreak.compositeRiskScore})` : ''}
+              ${riskTokens.label}${hasNumericScore ? ` (${outbreak.compositeRiskScore})` : ''}
             </span>
           </div>
           <p class="text-[11px] text-[#526074]">Affected Cases: <strong class="text-[#101826]">${outbreak.affectedReportsCount}</strong></p>
@@ -412,6 +418,22 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
 
       group.addLayer(marker);
     });
+
+    // Track coordinate frequency to subtly disperse overlapping markers
+    const coordOccupancy = new Map<string, number>();
+    const getDispersedCoord = (lat: number, lng: number): [number, number] => {
+      const key = `${lat.toFixed(3)},${lng.toFixed(3)}`;
+      const count = coordOccupancy.get(key) || 0;
+      coordOccupancy.set(key, count + 1);
+      if (count === 0) return [lat, lng];
+
+      // Subtle radial dispersal (approx 350m - 700m offset on map)
+      const angle = count * 1.05;
+      const radius = 0.0035 + Math.floor(count / 6) * 0.002;
+      const offsetLat = Math.sin(angle) * radius;
+      const offsetLng = Math.cos(angle) * (radius / Math.cos((lat * Math.PI) / 180));
+      return [lat + offsetLat, lng + offsetLng];
+    };
 
     // B. Render Individual Confirmed & Suspected Field Cases
     reports.forEach((report) => {
@@ -432,7 +454,8 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
         iconAnchor: [7, 7],
       });
 
-      const caseMarker = L.marker([report.latitude, report.longitude], {
+      const [caseLat, caseLng] = getDispersedCoord(report.latitude, report.longitude);
+      const caseMarker = L.marker([caseLat, caseLng], {
         icon: caseIcon,
         zIndexOffset: isConfirmed ? 200 : 100,
       });
@@ -454,7 +477,7 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
       aiScreenings.forEach((screening) => {
         if (!screening.latitude || !screening.longitude) return;
 
-        const isVerified = screening.veterinarianVerified;
+        const reviewLabel = aiReviewState(screening).label;
         const confidencePct =
           screening.confidenceScore !== null && screening.confidenceScore !== undefined
             ? `${(screening.confidenceScore * 100).toFixed(0)}%`
@@ -473,16 +496,17 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
           iconAnchor: [7, 7],
         });
 
-        const aiMarker = L.marker([screening.latitude, screening.longitude], {
+        const [aiLat, aiLng] = getDispersedCoord(screening.latitude, screening.longitude);
+        const aiMarker = L.marker([aiLat, aiLng], {
           icon: aiIcon,
-          zIndexOffset: 150,
+          zIndexOffset: 300,
         });
 
         aiMarker.bindTooltip(
           `<strong>AI PRELIMINARY SCREENING</strong><br/>` +
             `Disease: ${screening.preliminaryDiagnosis}<br/>` +
             `Confidence: ${confidencePct}<br/>` +
-            `Status: ${isVerified ? 'Verified by Vet' : 'Awaiting Veterinary Verification'}<br/>` +
+            `Status: ${reviewLabel}<br/>` +
             `Location: ${screening.district || 'N/A'}${screening.taluka ? ', ' + screening.taluka : ''}`,
           { className: 'font-mono text-xs' }
         );
@@ -499,7 +523,7 @@ export const SurveillanceMap: React.FC<SurveillanceMapProps> = ({
             </div>
             <div class="font-bold text-[#101826] text-sm mb-1">${screening.preliminaryDiagnosis}</div>
             <p class="text-[11px] text-[#526074] mb-0.5">Tag: <strong class="text-[#101826]">${screening.tagNumber || 'Unregistered'}</strong> (${screening.species || 'Livestock'})</p>
-            <p class="text-[11px] text-[#526074] mb-0.5">Status: <strong class="text-[#D97B1F]">${isVerified ? 'Verified by Veterinarian' : 'Awaiting Veterinary Verification'}</strong></p>
+            <p class="text-[11px] text-[#526074] mb-0.5">Status: <strong class="text-[#D97B1F]">${reviewLabel}</strong></p>
             <p class="text-[11px] text-[#526074] mb-0.5">Location: <strong class="text-[#101826]">${screening.district || 'Maharashtra'}${screening.taluka ? ' · ' + screening.taluka : ''}</strong></p>
             <p class="text-[10px] text-[#93A1B0] mt-1">Screened: ${new Date(screening.createdAt).toLocaleString('en-IN')}</p>
           </div>

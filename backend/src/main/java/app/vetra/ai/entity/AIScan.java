@@ -77,10 +77,24 @@ public class AIScan extends BaseEntity {
   @Column(name = "notes", columnDefinition = "TEXT")
   private String notes;
 
+  /** Why the reviewer (vet or para-vet) rejected the AI result; the AI's own notes stay intact. */
+  @Column(name = "review_notes", columnDefinition = "TEXT")
+  private String reviewNotes;
+
+  /** Para-vet who checked the scan in the field and escalated it to a vet. */
+  @ManyToOne(fetch = FetchType.LAZY)
+  @JoinColumn(name = "triaged_by")
+  private User triagedBy;
+
+  @Column(name = "triaged_at")
+  private Instant triagedAt;
+
+  @Column(name = "triage_notes", columnDefinition = "TEXT")
+  private String triageNotes;
+
   @Version
   @Column(name = "version", nullable = false)
-  @Builder.Default
-  private Long version = 0L;
+  private Long version;
 
   public Animal getAnimal() {
     return animal;
@@ -212,7 +226,7 @@ public class AIScan extends BaseEntity {
     private User verifiedBy;
     private Instant verifiedAt;
     private String notes;
-    private Long version = 0L;
+    private Long version;
 
     public AIScanBuilder animal(Animal animal) {
       this.animal = animal;

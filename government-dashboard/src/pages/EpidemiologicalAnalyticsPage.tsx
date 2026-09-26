@@ -12,6 +12,8 @@ import { RiskSeverityDistributionCard } from '../components/analytics/RiskSeveri
 import { GeographicThreatRanking } from '../components/intelligence/GeographicThreatRanking';
 import { Button } from '../components/ui/Button';
 import { OutbreakResponse } from '../core/types/outbreak.types';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface EpidemiologicalAnalyticsPageProps {
   onNavigateToOutbreak?: (outbreakId: string) => void;
@@ -28,38 +30,43 @@ export const EpidemiologicalAnalyticsPage: React.FC<EpidemiologicalAnalyticsPage
 }) => {
   const [timeRange, setTimeRange] = React.useState<'ALL' | '7D' | '30D' | '90D'>('ALL');
   // 1. Fetch Disease Analytics Data
+  const analyticsQuery = useQuery({
+    queryKey: ['diseaseAnalytics'],
+    queryFn: () => diseaseService.getDiseaseAnalytics(),
+    refetchInterval: 60000,
+  });
   const {
     data: analytics,
     isLoading: isLoadingAnalytics,
     isError: isErrorAnalytics,
     refetch: refetchAnalytics,
-  } = useQuery({
-    queryKey: ['diseaseAnalytics'],
-    queryFn: () => diseaseService.getDiseaseAnalytics(),
-    refetchInterval: 60000,
-  });
+  } = analyticsQuery;
 
   // 2. Fetch Outbreak Statistics
-  const {
-    data: stats,
-    isLoading: isLoadingStats,
-    refetch: refetchStats,
-  } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ['outbreakStats'],
     queryFn: () => diseaseService.getOutbreakStatistics(),
     refetchInterval: 60000,
   });
+  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = statsQuery;
 
   // 3. Fetch Active Outbreaks for Threat Ranking & Risk Severity Breakdown
-  const {
-    data: outbreaks = [],
-    isLoading: isLoadingOutbreaks,
-    refetch: refetchOutbreaks,
-  } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['activeOutbreaksList'],
     queryFn: () => gisService.getOutbreaks(),
     refetchInterval: 60000,
   });
+  const {
+    data: outbreaks = [],
+    isLoading: isLoadingOutbreaks,
+    refetch: refetchOutbreaks,
+  } = outbreaksQuery;
+
+  // 60s polling here, so allow a wider window before declaring staleness.
+  const freshness = useDataFreshness(
+    [analyticsQuery, statsQuery, outbreaksQuery],
+    150_000
+  );
 
   const handleRefreshAll = () => {
     refetchAnalytics();
@@ -137,6 +144,8 @@ export const EpidemiologicalAnalyticsPage: React.FC<EpidemiologicalAnalyticsPage
 
   return (
     <div className="space-y-5" data-testid="epidemiological-analytics-page">
+      <DataFreshnessBanner freshness={freshness} subject="epidemiological analytics" />
+
       {/* Top Header Command Strip */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#E1E6EC] rounded-[6px] px-4 py-3 shadow-subtle">
         <div className="flex items-center gap-3">

@@ -14,6 +14,8 @@ import { AccessAuditSection } from '../components/settings/AccessAuditSection';
 import { AlertOctagon, RefreshCw } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface SettingsPageProps {
   selectedScope?: string;
@@ -25,6 +27,11 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
   const { user } = useAuth();
 
   // 1. Fetch System & Surveillance Configuration
+  const configQuery = useQuery({
+    queryKey: ['systemConfiguration'],
+    queryFn: systemService.getSystemConfiguration,
+    staleTime: 60000,
+  });
   const {
     data: configData,
     isLoading: isConfigLoading,
@@ -33,32 +40,33 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
     isRefetching: isConfigRefetching,
     refetch: refetchConfig,
     dataUpdatedAt: configUpdatedAt,
-  } = useQuery({
-    queryKey: ['systemConfiguration'],
-    queryFn: systemService.getSystemConfiguration,
-    staleTime: 60000,
-  });
+  } = configQuery;
 
   // 2. Fetch Health Status
-  const {
-    data: healthData,
-    refetch: refetchHealth,
-  } = useQuery({
+  const healthQuery = useQuery({
     queryKey: ['systemHealthStatus'],
     queryFn: systemService.getHealthStatus,
     staleTime: 30000,
   });
+  const { data: healthData, refetch: refetchHealth } = healthQuery;
 
   // 3. Fetch Disease Registry Single Source of Truth
-  const {
-    data: registryData = [],
-    isLoading: isRegistryLoading,
-    refetch: refetchRegistry,
-  } = useQuery({
+  const registryQuery = useQuery({
     queryKey: ['diseaseRegistrySettings'],
     queryFn: diseaseService.getDiseaseRegistry,
     staleTime: 60000,
   });
+  const {
+    data: registryData = [],
+    isLoading: isRegistryLoading,
+    refetch: refetchRegistry,
+  } = registryQuery;
+
+  // This page does not poll, so only an actual fetch failure means stale.
+  const freshness = useDataFreshness(
+    [configQuery, healthQuery, registryQuery],
+    Number.POSITIVE_INFINITY
+  );
 
   const handleRefreshAll = () => {
     refetchConfig();
@@ -122,6 +130,8 @@ export const SettingsPage: React.FC<SettingsPageProps> = ({
 
   return (
     <div className="space-y-4 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="system configuration" />
+
       {/* 1. Header */}
       <SettingsHeader
         selectedScope={selectedScope}

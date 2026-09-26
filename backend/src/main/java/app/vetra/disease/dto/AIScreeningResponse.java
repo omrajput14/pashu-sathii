@@ -31,6 +31,10 @@ public record AIScreeningResponse(
     UUID verifiedByUserId,
     String verifiedByVetName,
     Instant verifiedAt,
+    String reviewNotes,
+    String triagedByName,
+    Instant triagedAt,
+    String triageNotes,
     String source,
     Double latitude,
     Double longitude,
@@ -47,11 +51,24 @@ public record AIScreeningResponse(
 
   /**
    * Factory method mapping an AIScan entity and associated location data to an AIScreeningResponse.
+   * Strips large base64 image payloads for lightweight list transmission.
    *
    * @param scan source AIScan JPA entity
-   * @return populated AIScreeningResponse DTO
+   * @return populated AIScreeningResponse DTO with lightweight image reference
    */
   public static AIScreeningResponse fromEntity(AIScan scan) {
+    return fromEntity(scan, false);
+  }
+
+  /**
+   * Factory method mapping an AIScan entity with explicit control over whether raw/large base64
+   * image data is included.
+   *
+   * @param scan source AIScan JPA entity
+   * @param includeFullImage whether to preserve full base64 data URIs
+   * @return populated AIScreeningResponse DTO
+   */
+  public static AIScreeningResponse fromEntity(AIScan scan, boolean includeFullImage) {
     Animal animal = scan.getAnimal();
     FarmerProfile farmer = animal != null ? animal.getFarmer() : null;
 
@@ -69,15 +86,33 @@ public record AIScreeningResponse(
         scan.getVerifiedBy() != null ? scan.getVerifiedBy().getId() : null,
         resolveVerifierName(scan.getVerifiedBy()),
         scan.getVerifiedAt(),
+        scan.getReviewNotes(),
+        scan.getTriagedBy() != null ? scan.getTriagedBy().getDisplayName() : null,
+        scan.getTriagedAt(),
+        scan.getTriageNotes(),
         "AI_PRELIMINARY_SCREENING",
         farmer != null ? farmer.getLatitude() : null,
         farmer != null ? farmer.getLongitude() : null,
         farmer != null ? farmer.getDistrict() : null,
         farmer != null ? farmer.getTaluka() : null,
         farmer != null ? farmer.getState() : null,
-        scan.getImageUrl(),
+        resolveImageUrl(scan, includeFullImage),
         scan.getCreatedAt(),
         scan.getUpdatedAt());
+  }
+
+  private static String resolveImageUrl(AIScan scan, boolean includeFullImage) {
+    String url = scan.getImageUrl();
+    if (url == null || url.isBlank()) {
+      return null;
+    }
+    if (includeFullImage) {
+      return url;
+    }
+    if (url.startsWith("data:image/") || url.length() > 512) {
+      return "/api/v1/disease/ai-screenings/" + scan.getId() + "/image";
+    }
+    return url;
   }
 
   private static String resolveSpecies(Animal animal) {
@@ -113,9 +148,6 @@ public record AIScreeningResponse(
     if (verifier == null) {
       return null;
     }
-    if (verifier.getEmail() != null && !verifier.getEmail().isBlank()) {
-      return verifier.getEmail();
-    }
-    return verifier.getPhone();
+    return verifier.getDisplayName();
   }
 }

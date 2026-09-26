@@ -31,7 +31,7 @@ export const PriorityAlertRail: React.FC<PriorityAlertRailProps> = ({
   }
 
   // Filter top priority threats
-  const priorityOutbreaks = outbreaks.slice(0, 4);
+  const priorityOutbreaks = outbreaks.filter((o) => o.status !== 'RESOLVED').slice(0, 4);
 
   return (
     <div
@@ -47,7 +47,7 @@ export const PriorityAlertRail: React.FC<PriorityAlertRailProps> = ({
           </h2>
         </div>
         <span className="text-[10px] font-mono bg-[#E4EDF6] text-[#1E5C97] px-1.5 py-0.5 rounded-[2px] font-medium">
-          {priorityOutbreaks.length} Active
+          {priorityOutbreaks.length} Open
         </span>
       </div>
 

@@ -3,6 +3,7 @@ import { X, Tag, MapPin, Calendar, User, FileText } from 'lucide-react';
 import { DiseaseReportResponse } from '../../core/types/disease.types';
 import { Badge } from '../ui/Badge';
 import { Button } from '../ui/Button';
+import { ReviewChain } from '../reports/ReviewChain';
 
 interface CaseDetailDrawerProps {
   report: DiseaseReportResponse | null;
@@ -139,6 +140,12 @@ export const CaseDetailDrawer: React.FC<CaseDetailDrawerProps> = ({ report, onCl
               {report.reportedByName || 'Registered Field User'}
             </span>
           </div>
+        </div>
+
+        {/* How this case was reviewed: AI -> para-vet field check -> vet */}
+        <div className="p-2.5 bg-white border border-[#E1E6EC] rounded-[4px]">
+          <div className="text-[#526074] mb-1.5 font-mono uppercase text-[11px]">Review chain</div>
+          <ReviewChain report={report} />
         </div>
 
         {/* Clinical Notes */}

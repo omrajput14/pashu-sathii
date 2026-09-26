@@ -51,7 +51,7 @@ export const DiagnosticSourceDistributionCard: React.FC<DiagnosticSourceDistribu
       icon: Cpu,
       barColor: 'bg-[#6A1B9A]',
       badgeVariant: 'warning' as const,
-      description: 'Computer-vision assisted preliminary screening from field image telemetry.',
+      description: 'Farmer AI scan reviewed by a para-vet (suspected) or confirmed by a vet.',
     },
     {
       id: 'GOVERNMENT',

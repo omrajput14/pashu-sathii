@@ -15,6 +15,7 @@ import {
   mockVaccinationAnalytics,
   mockOperationalAlerts,
   mockSystemConfiguration,
+  mockAIScreenings,
 } from './mockData';
 
 export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'https://api.vetra.co.in/api/v1';
@@ -85,6 +86,21 @@ export function getMockResponseForUrl(url: string, _method = 'get', postData?: a
   }
   if (cleanUrl.includes('/disease/analytics')) {
     return mockDiseaseAnalytics;
+  }
+  if (cleanUrl.includes('/disease/ai-screenings')) {
+    if (cleanUrl.includes('/page')) {
+      return {
+        content: mockAIScreenings,
+        totalElements: mockAIScreenings.length,
+        totalPages: 1,
+        size: 20,
+        number: 0,
+        first: true,
+        last: true,
+        empty: false,
+      };
+    }
+    return mockAIScreenings;
   }
   if (cleanUrl.includes('/disease/reports')) {
     return {
@@ -224,26 +240,15 @@ apiClient.interceptors.response.use(
       }
     }
 
-    // 2. Automatic Offline / Campus Firewall Fallback Interception
-    const isNetworkOrFirewallError =
-      !error.response ||
-      error.code === 'ERR_NETWORK' ||
-      error.code === 'ECONNABORTED' ||
-      error.message?.includes('Network Error') ||
-      error.message?.includes('timeout') ||
-      error.response?.status === 0 ||
-      // 403 Forbidden is a valid RBAC rejection and must not be masked as a network error
-      error.response?.status === 502 ||
-      error.response?.status === 503 ||
-      isDemoMode();
-
-        // Phase 4A Strict Requirement: Never silently fall back to synthetic data for vaccination campaigns in production
-    if ((originalRequest?.url?.includes('/vaccination/campaigns') || originalRequest?.url?.includes('/dashboard/economic-impact')) && !isDemoMode()) {
+    // 2. Strict Production Guard: Never silently substitute mock data in production or live mode.
+    // Silent mock substitution is ONLY permitted if isDemoMode() is explicitly true.
+    if (!isDemoMode()) {
       return Promise.reject(error);
     }
 
-    if (isNetworkOrFirewallError && originalRequest?.url) {
-      console.warn(`[PASHU SATHI Client] Live backend unreachable (Campus Firewall / Network). Engaging offline fallback for: ${originalRequest.url}`);
+    // 3. Offline / Demo Mode Fallback Interception (Only active when demo mode is explicitly enabled)
+    if (originalRequest?.url) {
+      console.warn(`[PASHU SATHI Client] Demo mode active. Engaging offline mock fallback for: ${originalRequest.url}`);
       let parsedPostData;
       if (originalRequest.data) {
         try {
@@ -261,7 +266,7 @@ apiClient.interceptors.response.use(
       const syntheticResponse: AxiosResponse = {
         data: {
           success: true,
-          message: 'OFFLINE_FIREWALL_FALLBACK_DATA',
+          message: 'OFFLINE_DEMO_FALLBACK_DATA',
           data: mockData,
           timestamp: new Date().toISOString(),
         },

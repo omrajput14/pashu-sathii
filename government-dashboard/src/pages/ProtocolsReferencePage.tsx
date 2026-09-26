@@ -11,6 +11,8 @@ import { ProtocolDetailDrawer } from '../components/protocols/ProtocolDetailDraw
 import { RefreshCw, BookOpen, AlertOctagon } from 'lucide-react';
 import { Button } from '../components/ui/Button';
 import { Badge } from '../components/ui/Badge';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface ProtocolsReferencePageProps {
   initialDiseaseName?: string | null;
@@ -31,6 +33,11 @@ export const ProtocolsReferencePage: React.FC<ProtocolsReferencePageProps> = ({
   const [selectedProtocol, setSelectedProtocol] = useState<DiseaseProtocolRecord | null>(null);
 
   // 1. Fetch disease registry directly from backend single source of truth
+  const registryQuery = useQuery({
+    queryKey: ['diseaseRegistryProtocols'],
+    queryFn: diseaseService.getDiseaseRegistry,
+    staleTime: 60000,
+  });
   const {
     data: registryData = null,
     isLoading: isRegistryLoading,
@@ -39,18 +46,22 @@ export const ProtocolsReferencePage: React.FC<ProtocolsReferencePageProps> = ({
     isRefetching,
     refetch,
     dataUpdatedAt,
-  } = useQuery({
-    queryKey: ['diseaseRegistryProtocols'],
-    queryFn: diseaseService.getDiseaseRegistry,
-    staleTime: 60000,
-  });
+  } = registryQuery;
 
   // 2. Fetch active outbreaks for correlation
-  const { data: outbreaks = [], isLoading: isOutbreaksLoading } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['activeOutbreaksForProtocols'],
     queryFn: () => diseaseService.listOutbreaks('ACTIVE'),
     staleTime: 30000,
   });
+  const { data: outbreaks = [], isLoading: isOutbreaksLoading } = outbreaksQuery;
+
+  // This page does not poll, so age alone never means stale here — only an
+  // actual fetch failure does.
+  const freshness = useDataFreshness(
+    [registryQuery, outbreaksQuery],
+    Number.POSITIVE_INFINITY
+  );
 
   // Map backend metadata to DiseaseProtocolRecords (only if registryData is loaded from backend)
   const protocols: DiseaseProtocolRecord[] = useMemo(() => {
@@ -127,6 +138,8 @@ export const ProtocolsReferencePage: React.FC<ProtocolsReferencePageProps> = ({
 
   return (
     <div className="space-y-4 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="protocol reference" />
+
       {/* 1. Header with Freshness & Scope */}
       <ProtocolsHeader
         selectedScope={selectedScope}

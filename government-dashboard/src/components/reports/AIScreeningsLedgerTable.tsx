@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { AIScreeningResponse, Page } from '../../core/types/disease.types';
 import { ChevronLeft, ChevronRight, Eye, Sparkles, CheckCircle2, Clock, MapPin, X } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { aiReviewState, AI_REVIEW_BADGE } from '../../core/utils/aiReview';
 
 interface AIScreeningsLedgerTableProps {
   pageData?: Page<AIScreeningResponse>;
@@ -78,7 +79,7 @@ export const AIScreeningsLedgerTable: React.FC<AIScreeningsLedgerTableProps> = (
               </tr>
             ) : (
               screenings.map((s) => {
-                const isVerified = s.veterinarianVerified;
+                const review = aiReviewState(s);
                 const confPct =
                   s.confidenceScore !== null && s.confidenceScore !== undefined
                     ? (s.confidenceScore * 100).toFixed(1)
@@ -160,16 +161,12 @@ export const AIScreeningsLedgerTable: React.FC<AIScreeningsLedgerTableProps> = (
 
                     {/* Verification Status */}
                     <td className="py-3 px-3">
-                      {isVerified ? (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-[#EDF7F0] text-[#1B806A] border border-[#C2E7DA]">
-                          <CheckCircle2 className="w-3 h-3" />
-                          <span>Verified by Vet</span>
-                        </span>
-                      ) : (
-                        <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded bg-[#FEF3E8] text-[#D97B1F] border border-[#FADCC0]">
-                          <Clock className="w-3 h-3" />
-                          <span>Awaiting Veterinary Verification</span>
-                        </span>
+                      <span className={`inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded border ${AI_REVIEW_BADGE[review.tone]}`}>
+                        {review.tone === 'confirmed' ? <CheckCircle2 className="w-3 h-3" /> : <Clock className="w-3 h-3" />}
+                        <span>{review.label}</span>
+                      </span>
+                      {review.detail && (
+                        <div className="mt-1 text-[10px] text-[#526074] max-w-[220px] leading-snug">{review.detail}</div>
                       )}
                     </td>
 

@@ -87,7 +87,7 @@ export interface GisFilterState {
 export const DEFAULT_GIS_FILTERS: GisFilterState = {
   disease: 'ALL',
   riskLevel: 'ALL',
-  status: 'ACTIVE',
+  status: 'ALL',
   diagnosisStatus: 'ALL',
   confidenceSource: 'ALL',
   showOutbreakBuffers: true,

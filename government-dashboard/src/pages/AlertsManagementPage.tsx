@@ -7,6 +7,8 @@ import { OperationalPriorityQueueCard } from '../components/alerts/OperationalPr
 import { Siren, RefreshCw, AlertTriangle, ShieldAlert, ShieldCheck, Download, MapPin } from 'lucide-react';
 import { isAlertInScope, isOutbreakInScope, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
 import { Button } from '../components/ui/Button';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface AlertsManagementPageProps {
   onNavigateToOutbreak?: (outbreakId: string) => void;
@@ -26,23 +28,27 @@ export const AlertsManagementPage: React.FC<AlertsManagementPageProps> = ({
   const [selectedEventType, setSelectedEventType] = useState('ALL');
 
   // Fetch real operational alerts
+  const alertsQuery = useQuery({
+    queryKey: ['operationalAlerts'],
+    queryFn: diseaseService.listOperationalAlerts,
+    refetchInterval: 30000,
+  });
   const {
     data: alerts = [],
     isLoading: isAlertsLoading,
     isRefetching: isAlertsRefetching,
     refetch: refetchAlerts,
-  } = useQuery({
-    queryKey: ['operationalAlerts'],
-    queryFn: diseaseService.listOperationalAlerts,
-    refetchInterval: 30000,
-  });
+  } = alertsQuery;
 
   // Fetch active outbreaks for the Priority Queue
-  const { data: outbreaks = [] } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['outbreaksList', 'ACTIVE'],
     queryFn: () => diseaseService.listOutbreaks('ACTIVE'),
     refetchInterval: 30000,
   });
+  const { data: outbreaks = [] } = outbreaksQuery;
+
+  const freshness = useDataFreshness([alertsQuery, outbreaksQuery]);
 
   // Filtered Alerts with scope
   const filteredAlerts = useMemo(() => {
@@ -105,6 +111,8 @@ export const AlertsManagementPage: React.FC<AlertsManagementPageProps> = ({
 
   return (
     <div className="space-y-4 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="operational alert" />
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-[6px] border border-[#E1E6EC] shadow-subtle">
         <div>

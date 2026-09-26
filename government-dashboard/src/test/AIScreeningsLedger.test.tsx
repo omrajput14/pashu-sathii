@@ -38,7 +38,7 @@ describe('AIScreeningsLedgerTable Component', () => {
       preliminaryDiagnosis: 'Foot and Mouth Disease',
       confidenceScore: 0.92,
       severity: 'CRITICAL',
-      status: 'COMPLETED',
+      status: 'VERIFIED',
       veterinarianVerified: true,
       verifiedByUserId: 'vet-001',
       verifiedByVetName: 'dr.deshmukh@vetra.app',
@@ -96,8 +96,8 @@ describe('AIScreeningsLedgerTable Component', () => {
       />
     );
 
-    expect(screen.getByText('Awaiting Veterinary Verification')).toBeInTheDocument();
-    expect(screen.getByText('Verified by Vet')).toBeInTheDocument();
+    expect(screen.getByText('Awaiting field check')).toBeInTheDocument();
+    expect(screen.getByText('Confirmed by vet')).toBeInTheDocument();
   });
 
   it('displays confidence score percentage and location details', () => {

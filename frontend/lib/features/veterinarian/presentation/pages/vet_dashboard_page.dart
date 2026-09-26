@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../auth/presentation/providers/auth_provider.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../../core/design_system/app_colors.dart';
@@ -7,6 +8,7 @@ import '../../../../core/design_system/navigation/vet_bottom_navigation.dart';
 import '../../../../core/localization/locale_provider.dart';
 import '../../../../l10n/app_localizations.dart';
 import 'package:vetra/features/dashboard/presentation/providers/dashboard_provider.dart';
+import '../../../shared/presentation/widgets/notification_bell.dart';
 import '../../../shared/presentation/widgets/sync_status_banner.dart';
 
 class VetDashboardPage extends ConsumerStatefulWidget {
@@ -37,9 +39,12 @@ class _VetDashboardPageState extends ConsumerState<VetDashboardPage> {
       animation: dashboardNotifier,
       builder: (context, _) {
         final dash = dashboardNotifier.dashboard;
-        final vetName = dash?.userName ?? 'Practitioner';
-        final clinicName = dash?.facilityName ?? (l10n?.clinicName ?? 'Veterinary Clinic');
-        final animalCount = dash?.registeredAnimalCount ?? 0;
+        // Offline: identity comes from the profile cached at sign-in; counts are
+        // unknown ("—") rather than a made-up 0.
+        final cachedUser = authNotifier.currentUser;
+        final vetName = dash?.userName ?? cachedUser?.name ?? 'Practitioner';
+        final clinicName = dash?.facilityName ?? cachedUser?.clinicName ?? (l10n?.clinicName ?? 'Veterinary Clinic');
+        final animalCount = dash?.registeredAnimalCount.toString() ?? '—';
 
         return Scaffold(
           backgroundColor: AppColors.surfaceBackground,
@@ -69,10 +74,7 @@ class _VetDashboardPageState extends ConsumerState<VetDashboardPage> {
                   style: AppTypography.captionMetadata.copyWith(color: AppColors.primary, fontWeight: FontWeight.bold),
                 ),
               ),
-              IconButton(
-                icon: const Icon(Icons.notifications_none, color: AppColors.textPrimary),
-                onPressed: () => context.push('/notifications'),
-              ),
+              const NotificationBell(),
               const SizedBox(width: 4),
             ],
           ),
@@ -119,7 +121,7 @@ class _VetDashboardPageState extends ConsumerState<VetDashboardPage> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('$animalCount', style: AppTypography.screenTitle.copyWith(color: AppColors.primary, fontSize: 32)),
+                            Text(animalCount, style: AppTypography.screenTitle.copyWith(color: AppColors.primary, fontSize: 32)),
                             const SizedBox(height: 4),
                             Text(l10n?.surveillanceAnimals ?? 'Surveillance Animals', style: AppTypography.captionMetadata),
                           ],
@@ -140,7 +142,7 @@ class _VetDashboardPageState extends ConsumerState<VetDashboardPage> {
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text('${dash?.pendingAppointmentsCount ?? 0}', style: AppTypography.screenTitle.copyWith(color: AppColors.cautionAmber, fontSize: 32)),
+                              Text(dash?.pendingAppointmentsCount.toString() ?? '—', style: AppTypography.screenTitle.copyWith(color: AppColors.cautionAmber, fontSize: 32)),
                               const SizedBox(height: 4),
                               Text(l10n?.pendingRequests ?? 'Pending Requests', style: AppTypography.captionMetadata),
                             ],

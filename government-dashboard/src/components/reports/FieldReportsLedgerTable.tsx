@@ -3,6 +3,7 @@ import { DiseaseReportResponse, Page } from '../../core/types/disease.types';
 import { Check, Copy, ChevronLeft, ChevronRight, FileText, MapPin, Eye } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
+import { ReviewChain } from './ReviewChain';
 
 interface FieldReportsLedgerTableProps {
   pageData?: Page<DiseaseReportResponse>;
@@ -195,6 +196,7 @@ export const FieldReportsLedgerTable: React.FC<FieldReportsLedgerTableProps> = (
                       >
                         {report.diagnosisConfidenceSource}
                       </Badge>
+                      <ReviewChain report={report} compact />
                     </td>
 
                     {/* GPS Coordinates */}

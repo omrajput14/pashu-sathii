@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 class SecureStorageService {
@@ -12,6 +14,32 @@ class SecureStorageService {
   static const String _keyUserRole = 'user_role';
   static const String _keyUserId = 'user_id';
   static const String _keyPreferredLanguage = 'preferred_language';
+  static const String _keyUserProfile = 'user_profile';
+
+  /// Last profile returned by the server, so a session can be restored offline.
+  Future<void> saveUserProfile(Map<String, dynamic> profile) async {
+    final value = jsonEncode(profile);
+    try {
+      await _storage.write(key: _keyUserProfile, value: value);
+    } catch (_) {
+      _memoryFallback[_keyUserProfile] = value;
+    }
+  }
+
+  Future<Map<String, dynamic>?> getUserProfile() async {
+    String? value;
+    try {
+      value = await _storage.read(key: _keyUserProfile);
+    } catch (_) {
+      value = _memoryFallback[_keyUserProfile];
+    }
+    if (value == null) return null;
+    try {
+      return jsonDecode(value) as Map<String, dynamic>;
+    } catch (_) {
+      return null;
+    }
+  }
 
   Future<void> saveTokens({
     required String accessToken,
@@ -85,6 +113,24 @@ class SecureStorageService {
       return await _storage.read(key: _keyPreferredLanguage);
     } catch (_) {
       return _memoryFallback[_keyPreferredLanguage];
+    }
+  }
+
+  static const String _keyAppLock = 'app_lock_enabled';
+
+  Future<void> setAppLockEnabled(bool enabled) async {
+    try {
+      await _storage.write(key: _keyAppLock, value: enabled ? 'true' : 'false');
+    } catch (_) {
+      _memoryFallback[_keyAppLock] = enabled ? 'true' : 'false';
+    }
+  }
+
+  Future<bool> isAppLockEnabled() async {
+    try {
+      return await _storage.read(key: _keyAppLock) == 'true';
+    } catch (_) {
+      return _memoryFallback[_keyAppLock] == 'true';
     }
   }
 

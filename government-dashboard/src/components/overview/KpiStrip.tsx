@@ -38,16 +38,22 @@ export const KpiStrip: React.FC<KpiStripProps> = ({ stats, analytics, economicIm
     : 0;
 
   // Real data only: Vet + Lab confirmed reports from reportsByConfidenceSource
-  const confirmedCount = hasAnalytics
-    ? (analytics!.reportsByConfidenceSource.VETERINARIAN ?? 0) +
-      (analytics!.reportsByConfidenceSource.LAB_CONFIRMED ?? 0)
-    : null;
+  // Confirmed means diagnosis status CONFIRMED (vet, lab, or vet-approved AI scan).
+  const byStatus = analytics?.reportsByDiagnosisStatus;
+  const confirmedCount = byStatus
+    ? byStatus.CONFIRMED ?? 0
+    : hasAnalytics
+      ? (analytics!.reportsByConfidenceSource.VETERINARIAN ?? 0) +
+        (analytics!.reportsByConfidenceSource.LAB_CONFIRMED ?? 0)
+      : null;
 
   // Real data only: AI verified + Government preliminary reports from reportsByConfidenceSource
-  const suspectedCount = hasAnalytics
-    ? (analytics!.reportsByConfidenceSource.AI_VERIFIED ?? 0) +
-      (analytics!.reportsByConfidenceSource.GOVERNMENT ?? 0)
-    : null;
+  const suspectedCount = byStatus
+    ? byStatus.SUSPECTED ?? 0
+    : hasAnalytics
+      ? (analytics!.reportsByConfidenceSource.AI_VERIFIED ?? 0) +
+        (analytics!.reportsByConfidenceSource.GOVERNMENT ?? 0)
+      : null;
 
   // Real authoritative backend economic aggregate (Phase 4B)
   const hasSufficientEconomicData = Boolean(

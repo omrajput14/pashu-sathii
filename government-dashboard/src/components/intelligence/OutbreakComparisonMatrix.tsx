@@ -60,11 +60,11 @@ export const OutbreakComparisonMatrix: React.FC<OutbreakComparisonMatrixProps> =
         <div className="flex items-center gap-2">
           <ShieldAlert className="w-4 h-4 text-[#1E5C97]" />
           <h2 className="text-xs font-mono font-semibold uppercase text-[#101826] tracking-wider">
-            Active Outbreak Clusters Comparison Matrix
+            Outbreak Clusters Comparison Matrix
           </h2>
         </div>
         <span className="text-[11px] font-mono text-[#526074]">
-          {outbreaks.length} Active Threats
+          {outbreaks.filter((o) => o.status !== 'RESOLVED').length} Open · {outbreaks.length} Total
         </span>
       </div>
 

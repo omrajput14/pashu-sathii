@@ -34,11 +34,11 @@ export const DiseaseDistributionChart: React.FC<DiseaseDistributionChartProps> =
         <div className="flex items-center gap-2">
           <Activity className="w-4 h-4 text-[#1E5C97]" />
           <h2 className="text-xs font-mono font-semibold uppercase text-[#101826] tracking-wider">
-            Disease Prevalence & Spatial Distribution
+            Outbreak Clusters by Disease
           </h2>
         </div>
         <span className="text-[11px] font-mono text-[#526074]">
-          {data.totalCases} Total Case Reports
+          {data.totalCases} Clusters
         </span>
       </div>
 
@@ -57,7 +57,7 @@ export const DiseaseDistributionChart: React.FC<DiseaseDistributionChartProps> =
                     <span className="font-semibold text-[#101826]">{item.name}</span>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="font-bold text-[#101826] tabular-nums">{item.count} cases</span>
+                    <span className="font-bold text-[#101826] tabular-nums">{item.count} {item.count === 1 ? 'cluster' : 'clusters'}</span>
                     <span className="text-[11px] text-[#526074] tabular-nums w-12 text-right">
                       {item.percentage.toFixed(1)}%
                     </span>

@@ -1,4 +1,5 @@
 import React from 'react';
+import { protocolReference } from '../../core/config/diseaseProtocols';
 import { DiseaseProtocolRecord } from '../../core/types/protocol.types';
 import { OutbreakResponse } from '../../core/types/outbreak.types';
 import { Badge } from '../ui/Badge';
@@ -111,7 +112,7 @@ export const ProtocolCatalogCard: React.FC<ProtocolCatalogCardProps> = ({
           <div>
             <span>Species: </span>
             <strong className="text-[#101826]">
-              {protocol.susceptibleSpecies || 'Not configured in registry'}
+              {protocol.susceptibleSpecies || protocolReference(protocol.diseaseName)?.species || 'Not configured in registry'}
             </strong>
           </div>
 

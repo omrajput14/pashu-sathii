@@ -13,6 +13,8 @@ import { CreateVaccinationCampaignRequest, CampaignPriority } from '../core/type
 import { Syringe, RefreshCw, Info, Plus, Download, MapPin } from 'lucide-react';
 import { isZoneInScope, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
 import { Button } from '../components/ui/Button';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface VaccinationIntelligencePageProps {
   onNavigateToOutbreak?: (outbreakId: string) => void;
@@ -29,16 +31,19 @@ export const VaccinationIntelligencePage: React.FC<VaccinationIntelligencePagePr
   const [isLaunchModalOpen, setIsLaunchModalOpen] = useState(false);
   const [initialCampaignData, setInitialCampaignData] = useState<Partial<CreateVaccinationCampaignRequest> | undefined>(undefined);
 
+  const vaccinationQuery = useQuery({
+    queryKey: ['vaccinationAnalytics'],
+    queryFn: diseaseService.getVaccinationAnalytics,
+    refetchInterval: 30000,
+  });
   const {
     data: vaccinationData,
     isLoading,
     isRefetching,
     refetch,
-  } = useQuery({
-    queryKey: ['vaccinationAnalytics'],
-    queryFn: diseaseService.getVaccinationAnalytics,
-    refetchInterval: 30000,
-  });
+  } = vaccinationQuery;
+
+  const freshness = useDataFreshness([vaccinationQuery]);
 
   const handleLaunchCampaign = () => {
     setInitialCampaignData(undefined);
@@ -141,6 +146,8 @@ export const VaccinationIntelligencePage: React.FC<VaccinationIntelligencePagePr
 
   return (
     <div className="space-y-5 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="vaccination intelligence" />
+
       {/* Institutional Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-[6px] border border-[#E1E6EC] shadow-subtle">
         <div>

@@ -104,3 +104,26 @@ export function classifyScoreToRiskLevel(score: number): OutbreakRiskScore {
   if (score >= RISK_THRESHOLDS.MEDIUM_MIN) return 'MEDIUM';
   return 'LOW';
 }
+
+/**
+ * Single source of truth for how an outbreak is coloured.
+ *
+ * `OutbreakScheduler` stamps `riskScore = LOW` when it auto-resolves a cluster
+ * but leaves `compositeRiskScore` at whatever the cluster last scored. Reading
+ * the colour from the enum while printing the number therefore renders things
+ * like a green "71" sitting next to an orange "67". Deriving the colour from
+ * the numeric score keeps the two in agreement everywhere the score is shown.
+ *
+ * Status is deliberately not a factor: the marker communicates risk magnitude,
+ * and whether a cluster is still open is carried separately by the status field
+ * and the status filter.
+ */
+export function resolveRiskToken(input: {
+  level?: OutbreakRiskScore | string | null;
+  score?: number | null;
+}) {
+  if (input.score !== null && input.score !== undefined && Number.isFinite(input.score)) {
+    return getRiskToken(classifyScoreToRiskLevel(input.score));
+  }
+  return getRiskToken(input.level);
+}

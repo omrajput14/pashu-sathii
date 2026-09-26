@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import { useQueryClient } from '@tanstack/react-query';
+import { diseaseService } from '../../core/api/diseaseService';
 import { OperationalAlertResponse } from '../../core/types/alerts.types';
 import { Badge } from '../ui/Badge';
 import { AlertTriangle, Siren, ShieldAlert, MapPin, ArrowRight, Copy, Check, Clock, ShieldCheck, Activity } from 'lucide-react';
@@ -16,8 +18,24 @@ export const OperationalAlertCard: React.FC<OperationalAlertCardProps> = ({
   onNavigateToMap,
 }) => {
   const [copied, setCopied] = useState(false);
-  const [isAcknowledged, setIsAcknowledged] = useState(false);
-  const [isEscalated, setIsEscalated] = useState(false);
+  const queryClient = useQueryClient();
+  const [busy, setBusy] = useState(false);
+  const [actionNote, setActionNote] = useState<string | null>(null);
+  const isEscalated = alert.status === 'ESCALATED';
+  const isAcknowledged = isEscalated || alert.status === 'ACKNOWLEDGED';
+
+  const act = async (action: 'acknowledge' | 'escalate') => {
+    setBusy(true);
+    try {
+      const result = await diseaseService.actOnAlert(alert.id, action);
+      setActionNote(action === 'escalate' ? `${result.vetsNotified} vet(s) within 50 km notified` : 'Saved');
+      await queryClient.invalidateQueries({ queryKey: ['operationalAlerts'] });
+    } catch (err: any) {
+      setActionNote(`Could not save: ${err?.response?.data?.message || err?.message || 'network error'}`);
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const handleCopy = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -168,8 +186,9 @@ export const OperationalAlertCard: React.FC<OperationalAlertCardProps> = ({
       {/* Action Deep-Links */}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-[#E1E6EC]">
         <span className="text-[10px] font-mono text-[#526074]">
-          Status: <strong className="text-[#101826]">{isAcknowledged ? 'ACKNOWLEDGED' : alert.status}</strong>
-          {isEscalated ? ' · Directive Issued to District Collector' : isAcknowledged ? ' · Officer Reviewed' : ' · Requires Officer Review'}
+          Status: <strong className="text-[#101826]">{alert.status}</strong>
+          {isEscalated ? ' · Escalated to vets in the area' : isAcknowledged ? ' · Officer reviewed' : ' · Requires officer review'}
+          {actionNote && <> · {actionNote}</>}
         </span>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -177,7 +196,8 @@ export const OperationalAlertCard: React.FC<OperationalAlertCardProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setIsAcknowledged(true)}
+              disabled={busy}
+              onClick={() => act('acknowledge')}
               className="font-mono text-[11px] text-[#2E6930] hover:bg-[#EDF7F0] border-[#BFE4C9]"
             >
               <Check className="w-3.5 h-3.5 mr-1" />
@@ -194,7 +214,8 @@ export const OperationalAlertCard: React.FC<OperationalAlertCardProps> = ({
             <Button
               variant="secondary"
               size="sm"
-              onClick={() => setIsEscalated(true)}
+              disabled={busy}
+              onClick={() => act('escalate')}
               className="font-mono text-[11px] text-[#B7301F] hover:bg-[#FBEBEB] border-[#F5C2C7]"
             >
               <Siren className="w-3.5 h-3.5 mr-1" />
@@ -203,7 +224,7 @@ export const OperationalAlertCard: React.FC<OperationalAlertCardProps> = ({
           ) : (
             <span className="inline-flex items-center gap-1 text-[10px] font-mono text-[#B7301F] font-bold bg-[#FBEBEB] px-2 py-1 rounded border border-[#F5C2C7]">
               <Siren className="w-3 h-3" />
-              ESCALATED TO COLLECTOR
+              ESCALATED
             </span>
           )}
 

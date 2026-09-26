@@ -27,7 +27,7 @@ export const OutbreakAccessibleListView: React.FC<OutbreakAccessibleListViewProp
           </h2>
         </div>
         <span className="text-xs font-mono text-[#526074]">
-          {outbreaks.length} Active Clusters
+          {outbreaks.filter((o) => o.status !== 'RESOLVED').length} Active · {outbreaks.length} Total
         </span>
       </div>
 

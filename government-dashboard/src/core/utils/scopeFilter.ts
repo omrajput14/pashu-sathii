@@ -1,5 +1,5 @@
 import { OutbreakResponse } from '../types/outbreak.types';
-import { DiseaseReportResponse } from '../types/disease.types';
+import { DiseaseReportResponse, AIScreeningResponse } from '../types/disease.types';
 import { OperationalAlertResponse } from '../types/alerts.types';
 import { calculateHaversineDistanceKm } from './geoUtils';
 
@@ -147,6 +147,38 @@ export function isAlertInScope(alert: OperationalAlertResponse, scope: string): 
       if (alert.relatedOutbreakId.toLowerCase().includes(kw)) {
         return true;
       }
+    }
+  }
+
+  return false;
+}
+
+export function isScreeningInScope(screening: AIScreeningResponse, scope: string): boolean {
+  if (isStatewide(scope)) return true;
+  const config = getScopeConfig(scope);
+
+  const sDist = (screening.district || '').toLowerCase();
+  const sTal = (screening.taluka || '').toLowerCase();
+
+  for (const kw of config.keywords) {
+    if (sDist.includes(kw) || sTal.includes(kw)) {
+      return true;
+    }
+  }
+
+  if (config.district !== 'ALL' && sDist === config.district.toLowerCase()) {
+    return true;
+  }
+
+  if (screening.latitude && screening.longitude) {
+    const dist = calculateHaversineDistanceKm(
+      config.center[0],
+      config.center[1],
+      screening.latitude,
+      screening.longitude
+    );
+    if (dist <= config.radiusKm) {
+      return true;
     }
   }
 

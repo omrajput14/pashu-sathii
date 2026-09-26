@@ -9,10 +9,12 @@ import {
   Search,
 } from 'lucide-react';
 import { gisService } from '../core/api/gisService';
-import { diseaseService } from '../core/api/diseaseService';
+import { diseaseService, ContainmentResult } from '../core/api/diseaseService';
 import { OutbreakResponse, OutbreakRiskScore, OutbreakStatus } from '../core/types/outbreak.types';
 import { DiseaseReportResponse } from '../core/types/disease.types';
 import { RISK_CONFIG } from '../core/theme/tokens';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 import { OutbreakHeaderCard } from '../components/intelligence/OutbreakHeaderCard';
 import { FourSignalRiskDecomposition } from '../components/intelligence/FourSignalRiskDecomposition';
 import { ConfirmedVsSuspectedAnalysis } from '../components/intelligence/ConfirmedVsSuspectedAnalysis';
@@ -43,7 +45,25 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
   onScopeChange,
 }) => {
   const [containmentModalOpen, setContainmentModalOpen] = useState(false);
-  const [containmentSuccess, setContainmentSuccess] = useState(false);
+  const [containmentResult, setContainmentResult] = useState<ContainmentResult | null>(null);
+  const [containmentError, setContainmentError] = useState<string | null>(null);
+  const [deploying, setDeploying] = useState(false);
+  const [plannedDoses, setPlannedDoses] = useState(500);
+
+  const deployContainment = async () => {
+    if (!selectedOutbreak) return;
+    setDeploying(true);
+    setContainmentError(null);
+    try {
+      const result = await diseaseService.deployContainment(selectedOutbreak.id, { plannedDoses });
+      setContainmentResult(result);
+      setContainmentModalOpen(false);
+    } catch (err: any) {
+      setContainmentError(err?.response?.data?.message || err?.message || 'Could not deploy containment');
+    } finally {
+      setDeploying(false);
+    }
+  };
   const [selectedOutbreakId, setSelectedOutbreakId] = useState<string | null>(initialOutbreakId || null);
   const [diseaseFilter, setDiseaseFilter] = useState('ALL');
   const [riskFilter, setRiskFilter] = useState<'ALL' | OutbreakRiskScore>('ALL');
@@ -59,16 +79,21 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
   }, [initialOutbreakId]);
 
   // 1. Fetch All Active / Filtered Outbreak Clusters
+  const outbreaksQuery = useQuery({
+    queryKey: ['intelligenceOutbreaks', statusFilter],
+    queryFn: () => gisService.getOutbreaks(statusFilter === 'ALL' ? undefined : statusFilter),
+    refetchInterval: 30000,
+  });
   const {
     data: allOutbreaks = [],
     isLoading: isLoadingOutbreaks,
     isError: isErrorOutbreaks,
     refetch: refetchOutbreaks,
-  } = useQuery({
-    queryKey: ['intelligenceOutbreaks', statusFilter],
-    queryFn: () => gisService.getOutbreaks(statusFilter === 'ALL' ? undefined : statusFilter),
-    refetchInterval: 30000,
-  });
+  } = outbreaksQuery;
+
+  // Only the cluster list polls; the detail and report queries below are gated on
+  // a selection and are not expected to refresh on their own.
+  const freshness = useDataFreshness([outbreaksQuery]);
 
   // 2. Fetch Selected Outbreak Details (if selected)
   const {
@@ -129,6 +154,8 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
 
   return (
     <div className="space-y-5" data-testid="outbreak-intelligence-page">
+      <DataFreshnessBanner freshness={freshness} subject="outbreak intelligence" />
+
       {/* Top Header Command Strip */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#E1E6EC] rounded-[6px] px-4 py-3 shadow-subtle">
         <div className="flex items-center gap-3">
@@ -211,7 +238,7 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
               variant="primary"
               size="sm"
               onClick={() => {
-                setContainmentSuccess(false);
+                setContainmentResult(null);
                 setContainmentModalOpen(true);
               }}
               className="font-mono text-xs bg-[#B7301F] hover:bg-[#922417] text-white border-none"
@@ -234,15 +261,18 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
       </div>
 
       {/* Containment Protocol Active Confirmation Toast */}
-      {containmentSuccess && (
+      {containmentResult && (
         <div className="bg-[#EDF7F0] border border-[#BFE4C9] p-3 rounded-[6px] text-xs font-mono text-[#2E6930] flex items-center justify-between shadow-subtle animate-in fade-in">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-[#2E6930] shrink-0" />
             <span>
-              <strong>STATUTORY BIO-CONTAINMENT DIRECTIVE ACTIVATED:</strong> Rapid Vet Response team mobilized, livestock movement embargo initiated within ±{selectedOutbreak?.radiusKm || 25}km perimeter around cluster.
+              <strong>CONTAINMENT DEPLOYED:</strong> {containmentResult.campaignNote}
+              {containmentResult.campaignName ? ` (${containmentResult.campaignName})` : ''} Advisory pushed to{' '}
+              {containmentResult.farmersNotified} farmer(s) within ±{Math.round(containmentResult.radiusKm)} km and{' '}
+              {containmentResult.vetsNotified} vet(s) within 50 km; {containmentResult.paraVetsNotified ?? 0} para-vet(s) called to run the vaccination drive.
             </span>
           </div>
-          <button onClick={() => setContainmentSuccess(false)} className="text-[10px] underline font-bold">
+          <button onClick={() => setContainmentResult(null)} className="text-[10px] underline font-bold">
             Dismiss
           </button>
         </div>
@@ -255,7 +285,7 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
             <div className="flex items-center justify-between border-b border-[#E1E6EC] pb-3">
               <div className="flex items-center gap-2 text-[#B7301F]">
                 <ShieldAlert className="w-5 h-5" />
-                <h2 className="text-sm font-bold text-[#101826] uppercase">Statutory Containment Directive</h2>
+                <h2 className="text-sm font-bold text-[#101826] uppercase">Deploy Containment</h2>
               </div>
               <button onClick={() => setContainmentModalOpen(false)} className="text-[#526074] hover:text-[#101826] text-sm">✕</button>
             </div>
@@ -265,12 +295,23 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
               <p><strong className="text-[#101826]">Operational Buffer:</strong> ±{selectedOutbreak.radiusKm} km containment perimeter</p>
               <p><strong className="text-[#101826]">Risk Level:</strong> <span className="text-[#B7301F] font-bold">{selectedOutbreak.riskScore} ({selectedOutbreak.compositeRiskScore ?? 'N/A'}/100)</span></p>
               <div className="bg-[#F8FAFC] border border-[#E1E6EC] p-3 rounded space-y-1 text-[11px]">
-                <div className="font-bold text-[#101826] mb-1">Enforcement Protocol Checklist:</div>
-                <div>☑ Issue Section 144 livestock transport embargo within buffer zone</div>
-                <div>☑ Mobilize District Rapid Response Veterinary Unit (MVU)</div>
-                <div>☑ Broadcast SMS biometric advisory to registered farmers in taluka</div>
-                <div>☑ Order mandatory ring vaccination within 48-hour containment window</div>
+                <div className="font-bold text-[#101826] mb-1">This will:</div>
+                <div>1. Launch a ring-vaccination campaign for this outbreak (or reuse the one already open)</div>
+                <div>2. Push an advisory to every registered farmer within ±{selectedOutbreak.radiusKm} km</div>
+                <div>3. Push a containment notice to vets within 50 km</div>
+                <div>4. Call approved para-vets nearby to run the drive and record each dose</div>
               </div>
+              <label className="flex items-center justify-between gap-2 text-[11px]">
+                <span className="text-[#101826] font-bold">Planned vaccine doses</span>
+                <input
+                  type="number"
+                  min={1}
+                  value={plannedDoses}
+                  onChange={(e) => setPlannedDoses(Math.max(1, Number(e.target.value) || 1))}
+                  className="w-28 px-2 py-1 border border-[#C7D0DB] rounded text-right"
+                />
+              </label>
+              {containmentError && <p className="text-[#B7301F] text-[11px]">{containmentError}</p>}
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-2 border-t border-[#E1E6EC]">
@@ -281,12 +322,10 @@ export const OutbreakIntelligencePage: React.FC<OutbreakIntelligencePageProps> =
                 variant="primary"
                 size="sm"
                 className="bg-[#B7301F] hover:bg-[#922417] text-white border-none"
-                onClick={() => {
-                  setContainmentModalOpen(false);
-                  setContainmentSuccess(true);
-                }}
+                disabled={deploying}
+                onClick={deployContainment}
               >
-                Confirm & Dispatch Directive
+                {deploying ? 'Deploying…' : 'Confirm & Deploy'}
               </Button>
             </div>
           </div>

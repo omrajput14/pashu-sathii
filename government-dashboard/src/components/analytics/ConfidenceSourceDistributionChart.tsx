@@ -48,13 +48,13 @@ export const ConfidenceSourceDistributionChart: React.FC<ConfidenceSourceDistrib
       description: 'PCR / serology confirmation entered via clinical record (LIMS bridge planned)',
     },
     {
-      label: 'AI Multimodal Vision Scans',
+      label: 'AI Scans Reviewed by Vets',
       code: 'AI_VERIFIED',
       count: stats.ai,
       pct: stats.aiPct,
       color: 'bg-[#D97B1F]',
       icon: Bot,
-      description: 'Provisional automated symptom triage (Farmer app)',
+      description: 'Farmer AI scan, escalated by a para-vet and/or confirmed by a vet'
     },
     {
       label: 'Official Government Surveillance',

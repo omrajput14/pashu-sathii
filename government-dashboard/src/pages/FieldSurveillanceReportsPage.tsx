@@ -6,9 +6,11 @@ import { FieldReportsFilterBar } from '../components/reports/FieldReportsFilterB
 import { FieldReportsLedgerTable } from '../components/reports/FieldReportsLedgerTable';
 import { AIScreeningsLedgerTable } from '../components/reports/AIScreeningsLedgerTable';
 import { CaseDetailDrawer } from '../components/gis/CaseDetailDrawer';
-import { FileSpreadsheet, RefreshCw, Sparkles, Activity, Download, MapPin } from 'lucide-react';
+import { FileSpreadsheet, RefreshCw, Sparkles, Activity, Download, MapPin, AlertTriangle } from 'lucide-react';
 import { isReportInScope, isStatewide, getScopeConfig, downloadCsv } from '../core/utils/scopeFilter';
 import { Button } from '../components/ui/Button';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface FieldSurveillanceReportsPageProps {
   inspectedReportId?: string | null;
@@ -36,16 +38,17 @@ export const FieldSurveillanceReportsPage: React.FC<FieldSurveillanceReportsPage
 
 
   // 1. Fetch paginated clinical disease reports
+  const reportsQuery = useQuery({
+    queryKey: ['fieldReports', currentPage, pageSize],
+    queryFn: () => diseaseService.listReports(currentPage, pageSize, 'createdAt,desc'),
+    refetchInterval: 30000,
+  });
   const {
     data: pageData,
     isLoading: isLoadingReports,
     isRefetching: isRefetchingReports,
     refetch: refetchReports,
-  } = useQuery({
-    queryKey: ['fieldReports', currentPage, pageSize],
-    queryFn: () => diseaseService.listReports(currentPage, pageSize, 'createdAt,desc'),
-    refetchInterval: 30000,
-  });
+  } = reportsQuery;
 
   // Auto-select inspected report when provided via navigation
   React.useEffect(() => {
@@ -56,16 +59,20 @@ export const FieldSurveillanceReportsPage: React.FC<FieldSurveillanceReportsPage
   }, [inspectedReportId, pageData]);
 
   // 2. Fetch paginated AI preliminary screenings
-  const {
-    data: aiPageData,
-    isLoading: isLoadingAI,
-    isRefetching: isRefetchingAI,
-    refetch: refetchAI,
-  } = useQuery({
+  const aiQuery = useQuery({
     queryKey: ['aiScreeningsPage', currentPage, pageSize],
     queryFn: () => diseaseService.listAIScreeningsPaginated(currentPage, pageSize),
     refetchInterval: 30000,
   });
+  const {
+    data: aiPageData,
+    isLoading: isLoadingAI,
+    isRefetching: isRefetchingAI,
+    isError: isErrorAI,
+    refetch: refetchAI,
+  } = aiQuery;
+
+  const freshness = useDataFreshness([reportsQuery, aiQuery]);
 
   // 3. Fetch disease registry for filter dropdown
   const { data: registry = [] } = useQuery({
@@ -218,14 +225,25 @@ export const FieldSurveillanceReportsPage: React.FC<FieldSurveillanceReportsPage
   };
 
   // KPIs derived from actual backend records
+  const { data: analytics } = useQuery({
+    queryKey: ['diseaseAnalytics'],
+    queryFn: () => diseaseService.getDiseaseAnalytics(),
+  });
+  const { data: allAiScreenings = [] } = useQuery({
+    queryKey: ['aiScreeningsAll'],
+    queryFn: () => diseaseService.listAIScreenings(),
+  });
   const allReports = pageData?.content || [];
-  const confirmedCount = allReports.filter((r) => r.diagnosisStatus === 'CONFIRMED').length;
-  const suspectedCount = allReports.filter((r) => r.diagnosisStatus === 'SUSPECTED').length;
-  const aiScreenings = aiPageData?.content || [];
-  const pendingAiCount = aiScreenings.filter((s) => !s.veterinarianVerified).length;
+  const byStatus = analytics?.reportsByDiagnosisStatus;
+  const confirmedCount = byStatus?.CONFIRMED ?? allReports.filter((r) => r.diagnosisStatus === 'CONFIRMED').length;
+  const suspectedCount = byStatus?.SUSPECTED ?? allReports.filter((r) => r.diagnosisStatus === 'SUSPECTED').length;
+  // Waiting for a decision: not yet field-checked, or escalated and waiting for a vet.
+  const pendingAiCount = allAiScreenings.filter((s) => s.status === 'COMPLETED' || s.status === 'ESCALATED').length;
 
   return (
     <div className="space-y-4 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="field surveillance" />
+
       {/* Header & Refresh Controls */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-[6px] border border-[#E1E6EC] shadow-subtle">
         <div>
@@ -392,17 +410,28 @@ export const FieldSurveillanceReportsPage: React.FC<FieldSurveillanceReportsPage
           onSelectReport={handleSelectReport}
         />
       ) : (
-        <AIScreeningsLedgerTable
-          pageData={filteredAIPageData}
-          isLoading={isLoadingAI}
-          currentPage={currentPage}
-          pageSize={pageSize}
-          onPageChange={setCurrentPage}
-          onPageSizeChange={(newSize) => {
-            setPageSize(newSize);
-            setCurrentPage(0);
-          }}
-        />
+        isErrorAI ? (
+          <div className="bg-white border border-[#F5C2C7] rounded-[6px] p-10 flex flex-col items-center justify-center gap-3 font-mono text-xs text-[#B7301F] shadow-subtle">
+            <AlertTriangle className="w-8 h-8 text-[#B7301F]" />
+            <strong className="text-sm">Failed to Load AI Preliminary Screening Telemetry</strong>
+            <p className="text-[#526074]">Live surveillance backend connection timed out or is unavailable.</p>
+            <Button size="sm" onClick={() => refetchAI()}>
+              Retry Telemetry Ingestion
+            </Button>
+          </div>
+        ) : (
+          <AIScreeningsLedgerTable
+            pageData={filteredAIPageData}
+            isLoading={isLoadingAI}
+            currentPage={currentPage}
+            pageSize={pageSize}
+            onPageChange={setCurrentPage}
+            onPageSizeChange={(newSize) => {
+              setPageSize(newSize);
+              setCurrentPage(0);
+            }}
+          />
+        )
       )}
 
       {/* Case Detail Inspection Drawer */}

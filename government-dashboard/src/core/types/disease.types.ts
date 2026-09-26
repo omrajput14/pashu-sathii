@@ -66,6 +66,12 @@ export interface AIScreeningResponse {
   verifiedByUserId: string | null;
   verifiedByVetName: string | null;
   verifiedAt: string | null;
+  /** Why the vet or para-vet rejected it. */
+  reviewNotes?: string | null;
+  /** Para-vet who field-checked the scan and escalated it to a vet. */
+  triagedByName?: string | null;
+  triagedAt?: string | null;
+  triageNotes?: string | null;
   source: string;
   latitude: number | null;
   longitude: number | null;

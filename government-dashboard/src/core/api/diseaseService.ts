@@ -6,6 +6,23 @@ import { AIScreeningResponse, DiseaseMetadata, DiseaseReportResponse, Page } fro
 import { VaccinationAnalyticsResponse } from '../types/vaccination.types';
 import { OperationalAlertResponse } from '../types/alerts.types';
 
+export interface ContainmentResult {
+  campaignId: string | null;
+  campaignName: string | null;
+  campaignCreated: boolean;
+  campaignNote: string;
+  farmersNotified: number;
+  vetsNotified: number;
+  paraVetsNotified: number;
+  radiusKm: number;
+}
+
+export interface AlertActionResult {
+  alertId: string;
+  status: string;
+  vetsNotified: number;
+}
+
 export const diseaseService = {
   async getOutbreakStatistics(): Promise<OutbreakStatisticsResponse> {
     const response = await apiClient.get<ApiResponse<OutbreakStatisticsResponse>>('/disease/outbreaks/statistics');
@@ -87,6 +104,21 @@ export const diseaseService = {
 
   async getAIScreeningById(id: string): Promise<AIScreeningResponse> {
     const response = await apiClient.get<ApiResponse<AIScreeningResponse>>(`/disease/ai-screenings/${id}`);
+    return response.data.data;
+  },
+
+  /** Launch ring vaccination for an outbreak and push an advisory to farmers and vets nearby. */
+  async deployContainment(
+    outbreakId: string,
+    body: { plannedDoses?: number; targetDistrict?: string; startDate?: string; notes?: string } = {},
+  ): Promise<ContainmentResult> {
+    const response = await apiClient.post<ApiResponse<ContainmentResult>>(`/disease/outbreaks/${outbreakId}/containment`, body);
+    return response.data.data;
+  },
+
+  /** Acknowledge or escalate an operational alert (stored; escalation notifies vets nearby). */
+  async actOnAlert(alertId: string, action: 'acknowledge' | 'escalate'): Promise<AlertActionResult> {
+    const response = await apiClient.post<ApiResponse<AlertActionResult>>(`/disease/alerts/${alertId}/${action}`, {});
     return response.data.data;
   },
 

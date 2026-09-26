@@ -69,7 +69,7 @@ describe('EpidemiologicalAnalyticsPage', () => {
 
     await waitFor(() => {
       expect(screen.getByText('Epidemiological Surveillance Analytics')).toBeInTheDocument();
-      expect(screen.getByText('Disease Prevalence & Spatial Distribution')).toBeInTheDocument();
+      expect(screen.getByText('Outbreak Clusters by Disease')).toBeInTheDocument();
       expect(screen.getAllByText('Foot and Mouth Disease').length).toBeGreaterThan(0);
       expect(screen.getByText('Diagnostic Verification Pipelines')).toBeInTheDocument();
       expect(screen.getByText('Licensed Field Veterinarians')).toBeInTheDocument();

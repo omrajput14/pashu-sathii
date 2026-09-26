@@ -46,6 +46,16 @@ class AuthService {
     }
   }
 
+  /// Signs in from what this device already knows, without the network.
+  /// Used when the server is too slow to answer at startup.
+  Future<bool> restoreCachedSession() async {
+    _currentUser ??= await _repository.getCachedUser();
+    return _currentUser != null;
+  }
+
+  Future<void> changePassword({required String currentPassword, required String newPassword}) =>
+      _repository.changePassword(currentPassword: currentPassword, newPassword: newPassword);
+
   Future<bool> loginFarmer({required String identifier, required String password}) async {
     _isLoading = true;
     _errorMessage = null;

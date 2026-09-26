@@ -4,6 +4,7 @@ import 'package:dio/dio.dart';
 import 'package:flutter/foundation.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/network/network_exceptions.dart';
 import '../../../../core/network/network_status_service.dart';
 import '../../../../core/offline/image_storage_service.dart';
 import '../../../../core/offline/models/offline_operation.dart';
@@ -51,6 +52,11 @@ class OfflineFirstAIScanRepository implements AIScanRepository {
   }) async {
     final isOnline = await _network.checkNow();
     final bool animalNeedsSync = await _animalLocal.doesAnimalNeedSync(animalId);
+    // One id for this scan: the Idempotency-Key of the online request and the
+    // operation id of its queued copy. AI inference can outlast the 35s timeout
+    // after the server has saved the scan; the replay then returns that scan
+    // instead of creating a second one.
+    final localId = _uuid.v4();
 
     // --- Online Path: try immediate AI inference ---
     if (isOnline && !animalNeedsSync) {
@@ -58,6 +64,7 @@ class OfflineFirstAIScanRepository implements AIScanRepository {
         final serverScan = await _remote.createScan(
           animalId: animalId,
           imagePath: imagePath,
+          idempotencyKey: localId,
         );
 
         // Save result locally in SQLite
@@ -67,42 +74,41 @@ class OfflineFirstAIScanRepository implements AIScanRepository {
           animalLocalId: animalId,
           animalServerId: animalId,
           localImagePath: permanentPath,
-          status: 'COMPLETED',
+          status: serverScan.isAnalysisFailure ? 'FAILED' : 'COMPLETED',
           syncStatus: 'synced',
         );
+
+        if (serverScan.isAnalysisFailure) {
+          // Record the failure as it is. Never substitute a diagnosis the AI did not make.
+          await _local.markAnalysisFailed(
+            localId: serverScan.id,
+            serverId: serverScan.id,
+            rawResultJson: json.encode(serverScan.toJson()),
+          );
+          return serverScan;
+        }
 
         await _local.updateWithResult(
           localId: serverScan.id,
           serverId: serverScan.id,
-          diagnosis: serverScan.diagnosis ?? 'Healthy / No Acute Anomalies',
-          confidenceScore: serverScan.confidenceScore ?? 0.85,
+          diagnosis: serverScan.diagnosis!,
+          confidenceScore: serverScan.confidenceScore,
           severity: serverScan.severity,
           observationsJson: json.encode(serverScan.observations),
           rawResultJson: json.encode(serverScan.toJson()),
         );
 
         return serverScan;
-      } on SocketException catch (e) {
-        debugPrint('[OfflineFirstAIScanRepo] Connection dropped during online scan, queueing offline: $e');
-      } on DioException catch (e) {
-        if (e.type == DioExceptionType.connectionError ||
-            e.type == DioExceptionType.connectionTimeout ||
-            e.type == DioExceptionType.sendTimeout ||
-            e.type == DioExceptionType.receiveTimeout) {
-          debugPrint('[OfflineFirstAIScanRepo] Network timeout during online scan, queueing offline: $e');
-        } else {
-          // Explicit server error (e.g. 400 validation, 401 auth, 500 error)
-          debugPrint('[OfflineFirstAIScanRepo] Server rejected scan: ${e.response?.statusCode} ${e.message}');
-          rethrow;
-        }
       } catch (e) {
-        debugPrint('[OfflineFirstAIScanRepo] Online scan unexpected error: $e');
-        rethrow;
+        // The server answered and refused the scan (400/401/500...): show why.
+        if (isServerRejection(e)) rethrow;
+        final connectivity = e is NetworkException || e is SocketException || e is DioException;
+        if (!connectivity) rethrow; // e.g. unreadable image: not something a retry fixes
+        debugPrint('[OfflineFirstAIScanRepo] No answer from server (offline or timed out), queueing: $e');
       }
     }
 
     // --- Offline Path: copy image, save local entry, enqueue operation ---
-    final localId = _uuid.v4();
     final permanentPath = await _imageStorage.copyToPermanentStorage(imagePath, localId);
 
     await _local.insert(

@@ -11,6 +11,8 @@ import { FutureLimsIntegrationPanel } from '../components/labs/FutureLimsIntegra
 import { CaseDetailDrawer } from '../components/gis/CaseDetailDrawer';
 import { FlaskConical, RefreshCw, AlertCircle } from 'lucide-react';
 import { Button } from '../components/ui/Button';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 
 interface LaboratorySurveillancePageProps {
   inspectedReportId?: string | null;
@@ -31,6 +33,11 @@ export const LaboratorySurveillancePage: React.FC<LaboratorySurveillancePageProp
   const [selectedReport, setSelectedReport] = useState<DiseaseReportResponse | null>(null);
 
   // 1. Fetch surveillance reports
+  const reportsQuery = useQuery({
+    queryKey: ['labSurveillanceReports'],
+    queryFn: () => diseaseService.listReports(0, 100, 'createdAt,desc'),
+    refetchInterval: 30000,
+  });
   const {
     data: reportsPage,
     isLoading: isReportsLoading,
@@ -39,18 +46,17 @@ export const LaboratorySurveillancePage: React.FC<LaboratorySurveillancePageProp
     isRefetching,
     refetch,
     dataUpdatedAt,
-  } = useQuery({
-    queryKey: ['labSurveillanceReports'],
-    queryFn: () => diseaseService.listReports(0, 100, 'createdAt,desc'),
-    refetchInterval: 30000,
-  });
+  } = reportsQuery;
 
   // 2. Fetch active outbreaks
-  const { data: outbreaks = [], isLoading: isOutbreaksLoading } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['activeOutbreaksForLabs'],
     queryFn: () => diseaseService.listOutbreaks(),
     refetchInterval: 30000,
   });
+  const { data: outbreaks = [], isLoading: isOutbreaksLoading } = outbreaksQuery;
+
+  const freshness = useDataFreshness([reportsQuery, outbreaksQuery]);
 
   // 3. Fetch disease registry for filter options
   const { data: registry = [] } = useQuery({
@@ -151,6 +157,8 @@ export const LaboratorySurveillancePage: React.FC<LaboratorySurveillancePageProp
 
   return (
     <div className="space-y-4 select-none pb-12">
+      <DataFreshnessBanner freshness={freshness} subject="laboratory surveillance" />
+
       {/* Header Banner */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-[6px] border border-[#E1E6EC] shadow-subtle">
         <div>

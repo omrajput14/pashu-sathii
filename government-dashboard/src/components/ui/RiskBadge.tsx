@@ -1,5 +1,5 @@
 import React from 'react';
-import { OutbreakRiskScore, getRiskToken } from '../../core/theme/tokens';
+import { OutbreakRiskScore, resolveRiskToken } from '../../core/theme/tokens';
 
 interface RiskBadgeProps {
   level?: OutbreakRiskScore | string | null;
@@ -14,7 +14,9 @@ export const RiskBadge: React.FC<RiskBadgeProps> = ({
   size = 'md',
   showScore = true,
 }) => {
-  const token = getRiskToken(level);
+  // Colour and label both come from the score when there is one, so the badge
+  // can never read "LOW (71)".
+  const token = resolveRiskToken({ level, score });
 
   const sizeClasses = {
     sm: 'text-[11px] px-1.5 py-0.5 tracking-wider',

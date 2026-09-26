@@ -13,13 +13,15 @@ import { gisService } from '../core/api/gisService';
 import { OutbreakResponse } from '../core/types/outbreak.types';
 import { DiseaseReportResponse } from '../core/types/disease.types';
 import { DEFAULT_GIS_FILTERS, GisFilterState } from '../core/types/gis.types';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 import { GisFilterBar } from '../components/gis/GisFilterBar';
 import { SurveillanceMap } from '../components/gis/SurveillanceMap';
 import { OutbreakDossierDrawer } from '../components/gis/OutbreakDossierDrawer';
 import { CaseDetailDrawer } from '../components/gis/CaseDetailDrawer';
 import { OutbreakAccessibleListView } from '../components/gis/OutbreakAccessibleListView';
 import { Button } from '../components/ui/Button';
-import { isOutbreakInScope, isReportInScope, getScopeConfig, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
+import { isOutbreakInScope, isReportInScope, isScreeningInScope, getScopeConfig, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
 import { Download, MapPin } from 'lucide-react';
 
 interface SurveillanceMapPageProps {
@@ -54,12 +56,7 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
 
 
   // 1. Fetch Outbreak Clusters from Backend
-  const {
-    data: allOutbreaks = [],
-    isLoading: isLoadingOutbreaks,
-    isError: isErrorOutbreaks,
-    refetch: refetchOutbreaks,
-  } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['gisOutbreaks', filters.status],
     queryFn: async () => {
       const data = await gisService.getOutbreaks(
@@ -70,20 +67,36 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
     },
     refetchInterval: 30000,
   });
+  const {
+    data: allOutbreaks = [],
+    isLoading: isLoadingOutbreaks,
+    isError: isErrorOutbreaks,
+    refetch: refetchOutbreaks,
+  } = outbreaksQuery;
 
   // 2. Fetch Recent Surveillance Reports for Point Overlays
-  const { data: reportsPage } = useQuery({
+  const reportsQuery = useQuery({
     queryKey: ['gisReports'],
     queryFn: () => gisService.getRecentReports(0, 100),
     refetchInterval: 30000,
   });
+  const { data: reportsPage, refetch: refetchReports } = reportsQuery;
 
   // 2b. Fetch AI Preliminary Screenings for GIS Point Overlays
-  const { data: rawAiScreenings = [] } = useQuery({
+  const aiScreeningsQuery = useQuery({
     queryKey: ['aiScreenings'],
     queryFn: () => gisService.getAIScreenings(),
     refetchInterval: 30000,
   });
+  const {
+    data: rawAiScreenings = [],
+    isError: isErrorAiScreenings,
+    refetch: refetchAiScreenings,
+  } = aiScreeningsQuery;
+
+  // Only the polling layers below count toward freshness. The heatmap is toggle-gated,
+  // and boundaries/districts use staleTime: Infinity as static geometry.
+  const freshness = useDataFreshness([outbreaksQuery, reportsQuery, aiScreeningsQuery]);
 
   // 3. Fetch Spatial Heatmap KDE Points (if toggled)
   const { data: heatmapPoints = [] } = useQuery({
@@ -174,15 +187,9 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
   // 6b. Apply Filter Predicates to AI Screenings
   const filteredAiScreenings = useMemo(() => {
     return rawAiScreenings.filter((s) => {
-      if (selectedScope && !isStatewide(selectedScope)) {
-        const sc = getScopeConfig(selectedScope);
-        const sDist = (s.district || '').toLowerCase();
-        const sTal = (s.taluka || '').toLowerCase();
-        const matchesScope = sc.keywords.some(kw => sDist.includes(kw) || sTal.includes(kw));
-        if (!matchesScope && sDist !== sc.district.toLowerCase()) return false;
-      }
+      if (selectedScope && !isScreeningInScope(s, selectedScope)) return false;
       if (filters.disease !== 'ALL' && s.preliminaryDiagnosis !== filters.disease) return false;
-      if (filters.district !== 'ALL' && s.district !== filters.district) return false;
+      if (filters.district !== 'ALL' && s.district?.toLowerCase() !== filters.district.toLowerCase()) return false;
       if (filters.searchQuery.trim()) {
         const query = filters.searchQuery.toLowerCase();
         const matchDisease = s.preliminaryDiagnosis.toLowerCase().includes(query);
@@ -192,7 +199,7 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
       }
       return true;
     });
-  }, [rawAiScreenings, filters]);
+  }, [rawAiScreenings, filters, selectedScope]);
 
   // 7. Apply Client Filter Predicates to Field Reports
   const filteredReports = useMemo(() => {
@@ -222,6 +229,8 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
 
   return (
     <div className="space-y-4" data-testid="surveillance-map-page">
+      <DataFreshnessBanner freshness={freshness} subject="GIS surveillance" />
+
       {/* Top Page Command Header */}
       <div className="flex flex-wrap items-center justify-between gap-3 bg-white border border-[#E1E6EC] rounded-[6px] px-4 py-3 shadow-subtle">
         <div className="flex items-center gap-3">
@@ -328,7 +337,7 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => refetchOutbreaks()}
+            onClick={() => { refetchOutbreaks(); refetchReports(); refetchAiScreenings(); }}
             className="font-mono text-xs text-[#526074]"
             title="Force refresh live telemetry"
           >
@@ -337,6 +346,24 @@ export const SurveillanceMapPage: React.FC<SurveillanceMapPageProps> = ({
           </Button>
         </div>
       </div>
+
+      {/* AI Preliminary Screenings Error Banner */}
+      {filters.showAiScreenings && isErrorAiScreenings && (
+        <div className="bg-[#FFF4F2] border border-[#F5C2C7] rounded-[4px] px-3.5 py-2.5 text-xs font-mono text-[#B7301F] flex items-center justify-between shadow-subtle">
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-[#B7301F]" />
+            <span>AI Preliminary Screening telemetry failed to ingest. Live preliminary markers unavailable.</span>
+          </div>
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => refetchAiScreenings()}
+            className="text-xs text-[#B7301F] hover:bg-[#FEE2E2]"
+          >
+            Retry Telemetry
+          </Button>
+        </div>
+      )}
 
       {/* GIS Operational Filter Bar with Dynamically Sourced Districts */}
       <GisFilterBar

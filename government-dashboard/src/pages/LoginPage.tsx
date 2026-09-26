@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Lock, User, AlertCircle, ArrowRight, KeyRound } from 'lucide-react';
+import { Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
 import { useAuth } from '../core/context/AuthContext';
 import { Button } from '../components/ui/Button';
 
@@ -35,31 +35,6 @@ export const LoginPage: React.FC = () => {
   };
 
 
-
-  const handleFillDemo = (id: string, pass: string) => {
-    setIdentifier(id);
-    setPassword(pass);
-    setError(null);
-  };
-
-  const handleDirectLogin = async (id: string, pass: string) => {
-    setIdentifier(id);
-    setPassword(pass);
-    setError(null);
-    setIsSubmitting(true);
-    try {
-      await login({ identifier: id, password: pass });
-    } catch (err: any) {
-      const serverMsg =
-        err?.response?.data?.message ||
-        err?.response?.data?.error?.message ||
-        (typeof err?.message === 'string' ? err.message : null) ||
-        'Authentication failed. If connected to campus Wi-Fi, the network firewall may block external APIs. Try again or switch to mobile hotspot.';
-      setError(serverMsg);
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
 
   return (
     <div className="min-h-screen w-screen bg-[#F6F8FA] flex flex-col justify-between select-none">
@@ -173,61 +148,6 @@ export const LoginPage: React.FC = () => {
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </form>
-
-          {/* Demonstration Officer Accounts Quick-Fill Card */}
-          <div className="mt-5 p-3.5 bg-[#F6F8FA] border border-[#E1E6EC] rounded-[4px] text-xs font-mono text-[#526074]">
-            <div className="text-[11px] font-semibold text-[#101826] uppercase mb-2 flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5 text-[#1E5C97]" />
-              <span>Demonstration Officer Accounts</span>
-            </div>
-            <div className="flex flex-col gap-2 text-[11px]">
-              <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded border border-[#E1E6EC]">
-                <div>
-                  <span className="text-[#101826] font-semibold">Chief Administrator:</span>
-                  <div className="text-[#1E5C97]">admin@vetra.gov.in · Password@123</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleFillDemo('admin@vetra.gov.in', 'Password@123')}
-                    className="text-[10px] bg-[#F6F8FA] text-[#526074] border border-[#C7D0DB] px-2 py-1 rounded font-semibold hover:bg-[#E1E6EC] transition-colors cursor-pointer"
-                  >
-                    Fill
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDirectLogin('admin@vetra.gov.in', 'Password@123')}
-                    className="text-[10px] bg-[#1E5C97] text-white px-2.5 py-1 rounded font-semibold hover:bg-[#164877] transition-colors cursor-pointer shadow-sm"
-                  >
-                    Direct Login
-                  </button>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between bg-white px-2.5 py-1.5 rounded border border-[#E1E6EC]">
-                <div>
-                  <span className="text-[#101826] font-semibold">Surveillance Officer:</span>
-                  <div className="text-[#1E5C97]">officer@vetra.gov.in · Password@123</div>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <button
-                    type="button"
-                    onClick={() => handleFillDemo('officer@vetra.gov.in', 'Password@123')}
-                    className="text-[10px] bg-[#F6F8FA] text-[#526074] border border-[#C7D0DB] px-2 py-1 rounded font-semibold hover:bg-[#E1E6EC] transition-colors cursor-pointer"
-                  >
-                    Fill
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleDirectLogin('officer@vetra.gov.in', 'Password@123')}
-                    className="text-[10px] bg-[#1E5C97] text-white px-2.5 py-1 rounded font-semibold hover:bg-[#164877] transition-colors cursor-pointer shadow-sm"
-                  >
-                    Direct Login
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
 
           <div className="mt-4 pt-3 border-t border-[#E1E6EC] text-[11px] font-mono text-[#526074] text-center">
             <p>Authorized personnel only · 256-bit Stateless JWT Security</p>

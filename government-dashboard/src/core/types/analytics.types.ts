@@ -9,6 +9,8 @@ export interface DiseaseAnalyticsResponse {
   diseaseDistribution: Record<string, number>;
   mostCommonDiseases: string[];
   reportsByConfidenceSource: Record<DiagnosisConfidenceSource, number>;
+  /** Report counts by diagnosis status (CONFIRMED / SUSPECTED / REJECTED). */
+  reportsByDiagnosisStatus?: Partial<Record<'CONFIRMED' | 'SUSPECTED' | 'REJECTED', number>>;
   totalMortalityReports?: number;
   farmerReportedMortalityCount?: number;
   vetConfirmedMortalityCount?: number;

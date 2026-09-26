@@ -13,6 +13,7 @@ import { AlertsManagementPage } from './pages/AlertsManagementPage';
 import { LaboratorySurveillancePage } from './pages/LaboratorySurveillancePage';
 import { ProtocolsReferencePage } from './pages/ProtocolsReferencePage';
 import { SettingsPage } from './pages/SettingsPage';
+import { FieldWorkforcePage } from './pages/FieldWorkforcePage';
 import { diseaseService } from './core/api/diseaseService';
 import { OutbreakResponse } from './core/types/outbreak.types';
 import { ShieldAlert, LogOut } from 'lucide-react';
@@ -248,6 +249,8 @@ const DashboardRoot: React.FC = () => {
             onNavigateToOutbreak={(id) => navigateTo('outbreaks', id)}
           />
         );
+      case 'workforce':
+        return <FieldWorkforcePage />;
       case 'settings':
         return (
           <SettingsPage

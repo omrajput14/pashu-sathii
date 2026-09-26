@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ShieldAlert } from 'lucide-react';
 import { OutbreakResponse } from '../../core/types/outbreak.types';
-import { RISK_CONFIG } from '../../core/theme/tokens';
+import { RISK_CONFIG, classifyScoreToRiskLevel } from '../../core/theme/tokens';
 
 interface RiskSeverityDistributionCardProps {
   outbreaks: OutbreakResponse[];
@@ -19,8 +19,10 @@ export const RiskSeverityDistributionCard: React.FC<RiskSeverityDistributionCard
     };
 
     outbreaks.forEach((o) => {
-      if (o.riskScore && map[o.riskScore] !== undefined) {
-        map[o.riskScore]++;
+      // Same rule as the badges: the numeric score decides the tier when there is one.
+      const level = o.compositeRiskScore != null ? classifyScoreToRiskLevel(o.compositeRiskScore) : o.riskScore;
+      if (level && map[level as keyof typeof map] !== undefined) {
+        map[level as keyof typeof map]++;
       }
     });
 

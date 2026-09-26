@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { AlertCircle, RefreshCw, Map as MapIcon, Maximize2, Download, MapPin, Clock } from 'lucide-react';
-import { isOutbreakInScope, isReportInScope, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
+import { RefreshCw, Map as MapIcon, Maximize2, Download, MapPin, Clock } from 'lucide-react';
+import { isOutbreakInScope, isReportInScope, isScreeningInScope, isStatewide, downloadCsv } from '../core/utils/scopeFilter';
 import { OutbreakStatisticsResponse } from '../core/types/outbreak.types';
 import { diseaseService } from '../core/api/diseaseService';
+import { useDataFreshness } from '../core/hooks/useDataFreshness';
+import { DataFreshnessBanner } from '../components/ui/DataFreshnessBanner';
 import { KpiStrip } from '../components/overview/KpiStrip';
 import { PriorityAlertRail } from '../components/overview/PriorityAlertRail';
+import { AITriageFunnel } from '../components/overview/AITriageFunnel';
 import { RecentSurveillanceTable } from '../components/overview/RecentSurveillanceTable';
 import { SurveillanceMap } from '../components/gis/SurveillanceMap';
 import { OutbreakResponse } from '../core/types/outbreak.types';
 import { DEFAULT_GIS_FILTERS } from '../core/types/gis.types';
+
+/** Bounded page size for the Overview map's AI screening layer. */
+const AI_SCREENING_MAP_PAGE_SIZE = 50;
 
 interface CommandOverviewPageProps {
   onNavigateToMap?: () => void;
@@ -29,62 +35,85 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
   const [severityFilter, setSeverityFilter] = useState<'ALL' | 'HIGH_CRITICAL'>('ALL');
 
   // Query 1: Outbreak Statistics
-  const {
-    data: stats,
-    isLoading: isLoadingStats,
-    error: statsError,
-    refetch: refetchStats,
-  } = useQuery({
+  const statsQuery = useQuery({
     queryKey: ['outbreakStats'],
     queryFn: diseaseService.getOutbreakStatistics,
     refetchInterval: 30000,
   });
+  const { data: stats, isLoading: isLoadingStats, refetch: refetchStats } = statsQuery;
 
   // Query 2: Active Outbreak List
-  const {
-    data: outbreaks = [],
-    isLoading: isLoadingOutbreaks,
-    error: outbreaksError,
-    refetch: refetchOutbreaks,
-  } = useQuery({
+  const outbreaksQuery = useQuery({
     queryKey: ['outbreaks'],
     queryFn: () => diseaseService.listOutbreaks(),
     refetchInterval: 30000,
   });
+  const {
+    data: outbreaks = [],
+    isLoading: isLoadingOutbreaks,
+    refetch: refetchOutbreaks,
+  } = outbreaksQuery;
 
   // Query 3: Disease Analytics Summary
-  const {
-    data: analytics,
-    isLoading: isLoadingAnalytics,
-    refetch: refetchAnalytics,
-  } = useQuery({
+  const analyticsQuery = useQuery({
     queryKey: ['diseaseAnalytics'],
     queryFn: diseaseService.getDiseaseAnalytics,
     refetchInterval: 30000,
   });
+  const {
+    data: analytics,
+    isLoading: isLoadingAnalytics,
+    refetch: refetchAnalytics,
+  } = analyticsQuery;
 
   // Query 4: Recent Field Surveillance Reports
-  const {
-    data: reportsPage,
-    isLoading: isLoadingReports,
-    error: reportsError,
-    refetch: refetchReports,
-  } = useQuery({
+  const reportsQuery = useQuery({
     queryKey: ['recentReports'],
     queryFn: () => diseaseService.listReports(0, 10),
     refetchInterval: 30000,
   });
+  const {
+    data: reportsPage,
+    isLoading: isLoadingReports,
+    refetch: refetchReports,
+  } = reportsQuery;
 
   // Query 5: Authoritative Statewide Economic Impact (Phase 4B)
-  const {
-    data: economicImpact,
-    isLoading: isLoadingEconomic,
-    refetch: refetchEconomic,
-  } = useQuery({
+  const economicQuery = useQuery({
     queryKey: ['statewideEconomicImpact'],
     queryFn: () => (diseaseService.getEconomicImpact ? diseaseService.getEconomicImpact() : Promise.resolve(null)),
     refetchInterval: 60000,
   });
+  const {
+    data: economicImpact,
+    isLoading: isLoadingEconomic,
+    refetch: refetchEconomic,
+  } = economicQuery;
+
+  // Query 6: AI Preliminary Screenings for map layer.
+  // Uses the paginated endpoint (the same one Field Reports uses) rather than the
+  // single-shot list, so this layer cannot grow into an unbounded payload as
+  // screenings accumulate — it was the first request to stall on weak links.
+  const aiScreeningsQuery = useQuery({
+    queryKey: ['aiScreeningsMapLayer', AI_SCREENING_MAP_PAGE_SIZE],
+    queryFn: () => diseaseService.listAIScreeningsPaginated(0, AI_SCREENING_MAP_PAGE_SIZE),
+    refetchInterval: 30000,
+  });
+  const { data: aiScreeningsPage, refetch: refetchAiScreenings } = aiScreeningsQuery;
+  const rawAiScreenings = React.useMemo(
+    () => aiScreeningsPage?.content ?? [],
+    [aiScreeningsPage]
+  );
+
+  // Live-data freshness across every polling query on this page.
+  const freshness = useDataFreshness([
+    statsQuery,
+    outbreaksQuery,
+    analyticsQuery,
+    reportsQuery,
+    economicQuery,
+    aiScreeningsQuery,
+  ]);
 
   const handleRefreshAll = () => {
     refetchStats();
@@ -92,6 +121,7 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
     refetchAnalytics();
     refetchReports();
     refetchEconomic();
+    refetchAiScreenings();
   };
 
   const handleOutbreakClick = (outbreak: OutbreakResponse) => {
@@ -100,8 +130,6 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
       onSelectOutbreak(outbreak);
     }
   };
-
-  const hasAnyError = Boolean(statsError || outbreaksError || reportsError);
 
   // Dynamic scope and time-range filtration
   const filteredOutbreaks = React.useMemo(() => {
@@ -137,6 +165,11 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
     const raw = reportsPage?.content || [];
     return raw.filter((r) => isReportInScope(r, selectedScope));
   }, [reportsPage, selectedScope]);
+
+  // Filter AI preliminary screenings by scope
+  const scopedAiScreenings = React.useMemo(() => {
+    return rawAiScreenings.filter((s) => isScreeningInScope(s, selectedScope));
+  }, [rawAiScreenings, selectedScope]);
 
   const scopedReportsPage = React.useMemo(() => {
     if (!reportsPage) return undefined;
@@ -196,29 +229,9 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
         </button>
       </div>
 
-      {/* Backend API Error Banner (if any API is unreachable) */}
-      {hasAnyError && (
-        <div
-          className="p-3.5 bg-[#FBEBEB] border border-[#F5C2C7] rounded-[4px] text-xs text-[#6E1423] flex items-start justify-between gap-2"
-          role="alert"
-        >
-          <div className="flex items-start gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <div>
-              <p className="font-semibold font-mono uppercase">Telemetry Ingestion Notice</p>
-              <p className="mt-0.5 text-[#526074]">
-                One or more disease endpoints are operating with cached parameters or initializing connection to the Spring Boot cluster engine.
-              </p>
-            </div>
-          </div>
-          <button
-            onClick={handleRefreshAll}
-            className="text-xs font-semibold underline text-[#6E1423] hover:opacity-80"
-          >
-            Retry Sync
-          </button>
-        </div>
-      )}
+      {/* Stale-data indicator: the page keeps rendering the last successful
+          values when refetches fail, so say so rather than implying they are live. */}
+      <DataFreshnessBanner freshness={freshness} subject="disease surveillance" />
 
       {/* Interactive Scope & Filter Quick-Action Strip */}
       <div className="flex flex-wrap items-center justify-between gap-2.5 bg-white border border-[#E1E6EC] p-3 rounded-[6px] shadow-subtle">
@@ -285,6 +298,8 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
         isLoading={isLoadingStats || isLoadingAnalytics || isLoadingEconomic}
       />
 
+      <AITriageFunnel />
+
       {/* 2. Split Main Operations: Live GIS Surface (65%) & Priority Alert Rail (35%) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-stretch">
         <div className="lg:col-span-8 flex flex-col bg-white border border-[#E1E6EC] rounded-[6px] shadow-subtle overflow-hidden">
@@ -296,7 +311,7 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
                 Live PostGIS Surveillance Map
               </h2>
               <span className="text-[10px] font-mono bg-[#E4EDF6] text-[#1E5C97] px-1.5 py-0.5 rounded-[2px] font-bold">
-                {filteredOutbreaks.length} Active Clusters
+                {filteredOutbreaks.filter((o) => o.status !== 'RESOLVED').length} Active · {filteredOutbreaks.length} Total
               </span>
             </div>
 
@@ -315,6 +330,7 @@ export const CommandOverviewPage: React.FC<CommandOverviewPageProps> = ({
             <SurveillanceMap
               outbreaks={filteredOutbreaks}
               reports={scopedReports}
+              aiScreenings={scopedAiScreenings}
               scope={selectedScope}
               filters={DEFAULT_GIS_FILTERS}
               selectedOutbreakId={selectedOutbreakId}
