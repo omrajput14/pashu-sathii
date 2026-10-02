@@ -65,27 +65,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => window.removeEventListener('vetra_auth_logout', handleExternalLogout);
   }, [refreshProfile]);
 
+  // No global isLoading here: it swaps the whole app to the INITIALIZING spinner, unmounting
+  // LoginPage and dropping its error message. LoginPage shows its own spinner.
   const login = async (credentials: LoginRequest) => {
-    setIsLoading(true);
-    try {
-      const authData = await authService.login(credentials);
-      // Validate role before committing session to storage
-      if (
-        authData.user.role !== 'GOVERNMENT_OFFICER' &&
-        authData.user.role !== 'ADMINISTRATOR'
-      ) {
-        throw new Error(
-          'Access Denied: The Government Surveillance Command Center is restricted to authorized Government Officers and Administrators. Veterinarians and Farmers must use their dedicated mobile applications.'
-        );
-      }
-
-      localStorage.setItem('vetra_gov_access_token', authData.accessToken);
-      localStorage.setItem('vetra_gov_refresh_token', authData.refreshToken);
-      localStorage.setItem('vetra_gov_user', JSON.stringify(authData.user));
-      setUser(authData.user);
-    } finally {
-      setIsLoading(false);
+    const authData = await authService.login(credentials);
+    // Validate role before committing session to storage
+    if (
+      authData.user.role !== 'GOVERNMENT_OFFICER' &&
+      authData.user.role !== 'ADMINISTRATOR'
+    ) {
+      throw new Error(
+        'Access Denied: The Government Surveillance Command Center is restricted to authorized Government Officers and Administrators. Veterinarians and Farmers must use their dedicated mobile applications.'
+      );
     }
+
+    localStorage.setItem('vetra_gov_access_token', authData.accessToken);
+    localStorage.setItem('vetra_gov_refresh_token', authData.refreshToken);
+    localStorage.setItem('vetra_gov_user', JSON.stringify(authData.user));
+    setUser(authData.user);
   };
 
   const logout = async () => {

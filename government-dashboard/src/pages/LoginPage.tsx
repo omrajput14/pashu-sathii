@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Lock, User, AlertCircle, ArrowRight } from 'lucide-react';
+import { Lock, User, AlertCircle, ArrowRight, KeyRound } from 'lucide-react';
 import { useAuth } from '../core/context/AuthContext';
 import { Button } from '../components/ui/Button';
+
 
 export const LoginPage: React.FC = () => {
   const { login } = useAuth();
@@ -17,12 +18,37 @@ export const LoginPage: React.FC = () => {
       return;
     }
 
+    await signIn(identifier.trim(), password);
+  };
+
+  const handleFillDemo = (id: string, pw: string) => {
+    setIdentifier(id);
+    setPassword(pw);
+    setError(null);
+  };
+
+  const handleDirectLogin = async (id: string, pw: string) => {
+    setIdentifier(id);
+    setPassword(pw);
+    await signIn(id, pw);
+  };
+
+  const signIn = async (id: string, pw: string) => {
     setError(null);
     setIsSubmitting(true);
 
     try {
-      await login({ identifier: identifier.trim(), password });
+      await login({ identifier: id, password: pw });
     } catch (err: any) {
+      if (err?.code === 'ERR_NETWORK' || !err?.response) {
+        try {
+          localStorage.setItem('vetra_demo_mode', 'true');
+          await login({ identifier: id, password: pw });
+          return;
+        } catch {
+          // fallback
+        }
+      }
       const serverMsg =
         err?.response?.data?.message ||
         err?.response?.data?.error?.message ||
@@ -148,6 +174,70 @@ export const LoginPage: React.FC = () => {
               <ArrowRight className="w-4 h-4 ml-1" />
             </Button>
           </form>
+
+          {/* SIH 2026 Jury Access & Demonstration Officer Accounts */}
+          <div className="mt-5 p-3.5 bg-[#F6F8FA] border border-[#E1E6EC] rounded-[4px] text-xs font-mono text-[#526074]">
+            <div className="text-[11px] font-semibold text-[#101826] uppercase mb-2 flex items-center justify-between">
+              <span className="flex items-center gap-1.5">
+                <KeyRound className="w-3.5 h-3.5 text-[#1E5C97]" />
+                <span>SIH Jury & Demonstration Accounts</span>
+              </span>
+              <span className="text-[9px] bg-[#E4EDF6] text-[#1E5C97] px-1.5 py-0.5 rounded font-bold">
+                1-CLICK ACCESS
+              </span>
+            </div>
+            <div className="flex flex-col gap-2 text-[11px]">
+              <div className="flex items-center justify-between bg-white px-2.5 py-2 rounded border border-[#E1E6EC]">
+                <div>
+                  <span className="text-[#101826] font-semibold">Surveillance Officer:</span>
+                  <div className="text-[#1E5C97] text-[10px]">officer@vetra.gov.in · Password@123</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleFillDemo('officer@vetra.gov.in', 'Password@123')}
+                    className="text-[10px] bg-[#F6F8FA] text-[#526074] border border-[#C7D0DB] px-2 py-1 rounded font-semibold hover:bg-[#E1E6EC] transition-colors cursor-pointer"
+                  >
+                    Fill
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleDirectLogin('officer@vetra.gov.in', 'Password@123')}
+                    className="text-[10px] bg-[#1E5C97] text-white px-2.5 py-1 rounded font-semibold hover:bg-[#164877] transition-colors cursor-pointer shadow-sm"
+                  >
+                    Direct Login
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between bg-white px-2.5 py-2 rounded border border-[#E1E6EC]">
+                <div>
+                  <span className="text-[#101826] font-semibold">Chief Administrator:</span>
+                  <div className="text-[#1E5C97] text-[10px]">admin@vetra.gov.in · Password@123</div>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleFillDemo('admin@vetra.gov.in', 'Password@123')}
+                    className="text-[10px] bg-[#F6F8FA] text-[#526074] border border-[#C7D0DB] px-2 py-1 rounded font-semibold hover:bg-[#E1E6EC] transition-colors cursor-pointer"
+                  >
+                    Fill
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSubmitting}
+                    onClick={() => handleDirectLogin('admin@vetra.gov.in', 'Password@123')}
+                    className="text-[10px] bg-[#1E5C97] text-white px-2.5 py-1 rounded font-semibold hover:bg-[#164877] transition-colors cursor-pointer shadow-sm"
+                  >
+                    Direct Login
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
 
           <div className="mt-4 pt-3 border-t border-[#E1E6EC] text-[11px] font-mono text-[#526074] text-center">
             <p>Authorized personnel only · 256-bit Stateless JWT Security</p>

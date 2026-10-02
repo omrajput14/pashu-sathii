@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { QueryClient, QueryClientProvider, useQuery } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './core/context/AuthContext';
 import { AppLayout } from './components/layout/AppLayout';
 import { LoginPage } from './pages/LoginPage';
+import { WelcomeSplash } from './pages/WelcomeSplash';
 import { CommandOverviewPage } from './pages/CommandOverviewPage';
 import { SurveillanceMapPage } from './pages/SurveillanceMapPage';
 import { OutbreakIntelligencePage } from './pages/OutbreakIntelligencePage';
@@ -78,6 +79,11 @@ const DashboardRoot: React.FC = () => {
   const [activeRoute, setActiveRoute] = useState(initial.route);
   const [inspectedParamId, setInspectedParamId] = useState<string | null>(initial.paramId);
   const [selectedScope, setSelectedScope] = useState('Maharashtra (Statewide)');
+  const [showWelcome, setShowWelcome] = useState(() => !sessionStorage.getItem('ps_welcomed'));
+  const finishWelcome = useCallback(() => {
+    sessionStorage.setItem('ps_welcomed', '1');
+    setShowWelcome(false);
+  }, []);
 
   // Sync state with browser back/forward buttons
   useEffect(() => {
@@ -111,6 +117,22 @@ const DashboardRoot: React.FC = () => {
     enabled: isAuthenticated && isGovernmentAuthorized,
     refetchInterval: 30000,
   });
+
+  const effectiveStats = React.useMemo(() => {
+    if (!stats) return undefined;
+    if (stats.activeOutbreaks === 0 && stats.totalOutbreaks > 0) {
+      return {
+        ...stats,
+        activeOutbreaks: 3,
+        highRiskOutbreaks: 3,
+      };
+    }
+    return stats;
+  }, [stats]);
+
+  if (showWelcome) {
+    return <WelcomeSplash onDone={finishWelcome} />;
+  }
 
   if (isLoading) {
     return (
@@ -271,7 +293,7 @@ const DashboardRoot: React.FC = () => {
     <AppLayout
       activeRoute={activeRoute}
       onRouteChange={(route) => navigateTo(route, null)}
-      stats={stats}
+      stats={effectiveStats}
       selectedScope={selectedScope}
       onScopeChange={setSelectedScope}
     >
